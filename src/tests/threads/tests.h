@@ -5,6 +5,7 @@ void run_test (const char *);
 
 typedef void test_func (void);
 
+extern test_func test_custom_test; // Made by Matt!
 extern test_func test_alarm_single;
 extern test_func test_alarm_multiple;
 extern test_func test_alarm_simultaneous;
@@ -38,4 +39,3 @@ void fail (const char *, ...);
 void pass (void);
 
 #endif /* tests/threads/tests.h */
-
