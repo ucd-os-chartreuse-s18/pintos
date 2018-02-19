@@ -11,7 +11,7 @@ struct test
 
 static const struct test tests[] =
   {
-    //{"custom-test", test_custom_test}, // Made by Matt!
+    {"custom-test", test_custom_test}, // Made by Matt!
     {"alarm-single", test_alarm_single},
     {"alarm-multiple", test_alarm_multiple},
     {"alarm-simultaneous", test_alarm_simultaneous},
