@@ -4,7 +4,8 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
-
+// not including this may have caused hours of headaches..? not sure
+#include <threads/synch.h>
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -95,7 +96,7 @@ struct thread
     struct list_elem elem;              /* List element. */
 
     // added semaphore
-    struct semaphore *thread_sema;
+    struct semaphore thread_sema;
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */

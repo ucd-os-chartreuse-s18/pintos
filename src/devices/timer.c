@@ -119,7 +119,7 @@ timer_sleep (int64_t ticks)
    * semaphore is upped by the timer interrupt.
    * to the sema_down and up functions
    */
-  sema_down(current_thread->thread_sema);
+  sema_down(&current_thread->thread_sema);
 
   /* reenable interrupts now that we have downed the semaphore
    * blocked the thread, again, following pintos style by passing

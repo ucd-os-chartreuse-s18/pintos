@@ -483,7 +483,7 @@ init_thread (struct thread *t, const char *name, int priority)
 
   //The value of t's magic changes to 0 when I initialize the semaphore.
   //Matt, I changed this initialize the semaphore as 0, it was 10
-  sema_init(t->thread_sema,0);
+  sema_init(&t->thread_sema,0);
 
   //When the ordering is changed, an infinite loop is created. Maybe
   //reordering was just avoiding the error we needed to see in the
