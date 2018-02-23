@@ -40,6 +40,7 @@ timer_init (void)
 {
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
+  list_init(&waiting_thread_list);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -229,7 +230,6 @@ timer_interrupt (struct intr_frame *args UNUSED)
     {
       sema_up(&tmp_thread->thread_sema);
       list_remove(&tmp_thread->elem);
-
     }
   }
 }
