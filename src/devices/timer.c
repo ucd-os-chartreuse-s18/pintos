@@ -213,9 +213,25 @@ timer_interrupt (struct intr_frame *args UNUSED)
    * and taking it off the waiting threads list.  
    * ?thread needs to be added to the ready list?
    */
+  
+  //create a list_elem to use for iterating through the list
+  struct list_elem *itr = list_begin(&waiting_thread_list);
 
+  //this for loop iterates through every element checking the ticks
+  for (itr = list_begin(&waiting_thread_list); 
+       itr != list_end (&waiting_thread_list);
+       itr = list_next (&waiting_thread_list))
+  {
+    struct thread *tmp_thread = list_entry (itr, struct thread, elem);
 
+    // up the semaphore and unblock the thread if we have reached the tick
+    if (tmp_thread->thread_wake_tick <= timer_ticks());
+    {
+      sema_up(&tmp_thread->thread_sema);
+      list_remove(&tmp_thread->elem);
 
+    }
+  }
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
