@@ -51,6 +51,7 @@ timer_calibrate (void)
   ASSERT (intr_get_level () == INTR_ON);
   printf ("Calibrating timer...  ");
 
+  old_level = intr_disable();
   /* Approximate loops_per_tick as the largest power-of-two
      still less than one timer tick. */
   loops_per_tick = 1u << 10;
@@ -67,6 +68,7 @@ timer_calibrate (void)
       loops_per_tick |= test_bit;
 
   printf ("%'"PRIu64" loops/s.\n", (uint64_t) loops_per_tick * TIMER_FREQ);
+  intr_set_level(old_level);
 }
 
 /* Returns the number of timer ticks since the OS booted. */
@@ -213,9 +215,25 @@ timer_interrupt (struct intr_frame *args UNUSED)
    * and taking it off the waiting threads list.  
    * ?thread needs to be added to the ready list?
    */
+  
+  //create a list_elem to use for iterating through the list
+  struct list_elem *itr = list_begin(&waiting_thread_list);
 
+  //this for loop iterates through every element checking the ticks
+  for (itr = list_begin(&waiting_thread_list); 
+       itr != list_end (&waiting_thread_list);
+       itr = list_next (&waiting_thread_list))
+  {
+    struct thread *tmp_thread = list_entry (itr, struct thread, elem);
 
+    // up the semaphore and unblock the thread if we have reached the tick
+    if (tmp_thread->thread_wake_tick <= ticks)
+    {
+      sema_up(&tmp_thread->thread_sema);
+      list_remove(&tmp_thread->elem);
 
+    }
+  }
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
