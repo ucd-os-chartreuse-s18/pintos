@@ -205,6 +205,16 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+
+  /* To wake a sleeping thread using the timer interrupt
+   * we need to check the elements of the waiting thread list
+   * to see if the current ticks are equal to the tick at which
+   * the thread should wake up.  If the tick is correct, we
+   * unblock the waiting thread by upping the thread's semaphore
+   * and taking it off the waiting threads list.  
+   * ?thread needs to be added to the ready list?
+   */
+
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
