@@ -225,7 +225,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
     struct thread *tmp_thread = list_entry (itr, struct thread, elem);
 
     // up the semaphore and unblock the thread if we have reached the tick
-    if (tmp_thread->thread_wake_tick <= timer_ticks());
+    if (tmp_thread->thread_wake_tick <= ticks)
     {
       sema_up(&tmp_thread->thread_sema);
       list_remove(&tmp_thread->elem);
