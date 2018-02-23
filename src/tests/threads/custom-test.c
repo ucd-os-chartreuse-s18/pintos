@@ -4,6 +4,7 @@
 // headers copied over from test_alarm_negative, so
 // I do not know what they each are for.
 #include <stdio.h>
+//#include "/home/pintos/pintos/src/tests/threads/tests.h"
 #include "tests/threads/tests.h" /* location of extern */
 //#include "threads/malloc.h"
 //#include "threads/synch.h"
@@ -17,5 +18,5 @@ test_custom_test (void)
   printf("Inside the custom test.");
   //Looks like this indicates that the test passes
   pass();
-  // the alternate is calling fail();
+  //What if we do: fail();?
 }
