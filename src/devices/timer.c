@@ -30,6 +30,9 @@ static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
+// Added struct to keep track of waiting threads
+struct list waiting_thread_list;
+
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
 void
@@ -90,10 +93,39 @@ void
 timer_sleep (int64_t ticks) 
 {
   int64_t start = timer_ticks ();
+  // the total tick value to wake at, check the waitlist each tick
+  int64_t tick_to_wake = start + ticks; 
+
+  // this pointer lets us reference the entire Thread structure
+  struct thread *current_thread = thread_current();
 
   ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+
+  /* keeping the old_level to use later for re-enabling.
+   * I would just directly disable and enable interrupts 
+   * but I am trying to follow the existing coding style
+   */
+  // disable interrrupts so the timer doesn't interfere
+  enum intr_level old_level = intr_disable(); // interrupts now disabled
+
+  //set the threads tick to wake
+  current_thread->thread_wake_tick = tick_to_wake;
+
+  // put the current thread on a list of sleeping threads
+  list_push_back (&waiting_thread_list, &current_thread->elem);
+  
+  /* down the thread's semaphore, causing it to be blocked until the
+   * semaphore is upped by the timer interrupt.
+   * to the sema_down and up functions
+   */
+  sema_down(current_thread->thread_sema);
+
+  /* reenable interrupts now that we have downed the semaphore
+   * blocked the thread, again, following pintos style by passing
+   * old_level to the set_level function
+   */
+  intr_set_level(old_level);
+
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -172,6 +204,18 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+
+  /* To wake a sleeping thread using the timer interrupt
+   * we need to check the elements of the waiting thread list
+   * to see if the current ticks are equal to the tick at which
+   * the thread should wake up.  If the tick is correct, we
+   * unblock the waiting thread by upping the thread's semaphore
+   * and taking it off the waiting threads list.  
+   * ?thread needs to be added to the ready list?
+   */
+
+
+
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
