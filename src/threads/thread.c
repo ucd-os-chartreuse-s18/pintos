@@ -462,7 +462,7 @@ init_thread (struct thread *t, const char *name, int priority)
 {
   printf("initializing a thread\n");
 
-  enum intr_level old_level;
+  //enum intr_level old_level;
 
   ASSERT (t != NULL);
   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
@@ -482,7 +482,8 @@ init_thread (struct thread *t, const char *name, int priority)
   //I think we will be using semaphores to sort threads at some point.
 
   //The value of t's magic changes to 0 when I initialize the semaphore.
-  sema_init(&(t->thread_sema), 10);
+  //Matt, I changed this initialize the semaphore as 0, it was 10
+  sema_init(t->thread_sema,0);
 
   //When the ordering is changed, an infinite loop is created. Maybe
   //reordering was just avoiding the error we needed to see in the
@@ -493,9 +494,10 @@ init_thread (struct thread *t, const char *name, int priority)
   //an error that tells me the semaphore is NULL, the program runs in
   //an infinite loop like I previously stated above.
 
-  old_level = intr_disable ();
+  //old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
-  intr_set_level (old_level);
+  
+  //intr_set_level (old_level);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
