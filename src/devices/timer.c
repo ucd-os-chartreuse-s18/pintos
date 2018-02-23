@@ -106,19 +106,20 @@ timer_sleep (int64_t ticks)
    * but I am trying to follow the existing coding style
    */
   // disable interrrupts so the timer doesn't interfere
-  enum intr_level old_level = intr_disable(); // interrupts now disabled
+  intr_level old_level = intr_disable(); // interrupts now disabled
 
   //set the threads tick to wake
-  current_thread->thread_wake_tick = tick_to_wake;
+  current_thread()->thread_wake_tick = tick_to_wake;
 
   // put the current thread on a list of sleeping threads
   list_push_back (&waiting_thread_list, &current_thread->elem);
   
   /* down the thread's semaphore, causing it to be blocked until the
    * semaphore is upped by the timer interrupt.
+   * we have to pass the value of the semaphore by reference
    * to the sema_down and up functions
    */
-  sema_down(current_thread->thread_sema);
+  sema_down(&current_thread->semaphore);
 
   /* reenable interrupts now that we have downed the semaphore
    * blocked the thread, again, following pintos style by passing
@@ -213,8 +214,6 @@ timer_interrupt (struct intr_frame *args UNUSED)
    * and taking it off the waiting threads list.  
    * ?thread needs to be added to the ready list?
    */
-
-
 
 }
 
