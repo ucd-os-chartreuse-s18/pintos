@@ -93,6 +93,9 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks)
 {
+  if (ticks <= 0) {
+    return;
+  }
   int64_t start = timer_ticks ();
   // the total tick value to wake at, check the waitlist each tick
   int64_t tick_to_wake = start + ticks;
