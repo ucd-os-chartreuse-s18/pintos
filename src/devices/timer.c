@@ -222,7 +222,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
   //create a list_elem to use for iterating through the list
   struct list_elem *itr = list_begin(&waiting_thread_list);
   //this loop iterates through every element checking the ticks
-  while (itr != list_end (&waiting_thread_list);)
+  while (itr != list_end (&waiting_thread_list))
   {
     struct thread *tmp_thread = list_entry (itr, struct thread, waiting_elem);
     
