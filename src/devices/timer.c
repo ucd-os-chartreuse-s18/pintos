@@ -235,11 +235,6 @@ timer_interrupt (struct intr_frame *args UNUSED)
     //printf("%d\n", count);
     count++;
     
-    //The actual end condition doesn't seem to work.
-    if ((int) tmp_thread->thread_wake_tick < 0) {
-      //printf("B\n");
-      break;
-    }
     
     //printf("%d\n", (int) tmp_thread->thread_wake_tick);
     // up the semaphore and unblock the thread if we have reached the tick
