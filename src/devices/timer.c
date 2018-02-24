@@ -221,26 +221,13 @@ timer_interrupt (struct intr_frame *args UNUSED)
 
   //create a list_elem to use for iterating through the list
   struct list_elem *itr = list_begin(&waiting_thread_list);
-
-  ASSERT (itr != NULL);
-  int count = 0;
-  //this for loop iterates through every element checking the ticks
-  for (itr = list_begin(&waiting_thread_list);
-       itr != list_end (&waiting_thread_list);
-       //itr = list_next (itr))
-     )
+  //this loop iterates through every element checking the ticks
+  while (itr != list_end (&waiting_thread_list);)
   {
     struct thread *tmp_thread = list_entry (itr, struct thread, waiting_elem);
     
-    //printf("%d\n", count);
-    count++;
-    
-    
-    //printf("%d\n", (int) tmp_thread->thread_wake_tick);
-    // up the semaphore and unblock the thread if we have reached the tick
     if (tmp_thread->thread_wake_tick <= ticks)
     {
-      count = 0;
       itr = list_remove(&tmp_thread->waiting_elem);
       sema_up(&tmp_thread->thread_sema);
     } else {
