@@ -41,6 +41,7 @@ timer_init (void)
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
   list_init(&waiting_thread_list);
+  //ASSERT(waiting_thread_list != NULL);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -219,21 +220,27 @@ timer_interrupt (struct intr_frame *args UNUSED)
    */
 
   //create a list_elem to use for iterating through the list
-  struct list_elem *itr = list_begin(&waiting_thread_list);
+  struct list_elem *itr;
 
+  bool wakeup_success = false;
   //this for loop iterates through every element checking the ticks
   for (itr = list_begin(&waiting_thread_list);
        itr != list_end (&waiting_thread_list);
-       itr = list_next (&waiting_thread_list))
+       itr = list_next (itr))
   {
     struct thread *tmp_thread = list_entry (itr, struct thread, elem);
 
     // up the semaphore and unblock the thread if we have reached the tick
     if (tmp_thread->thread_wake_tick <= ticks)
     {
+      wakeup_success = true;
       sema_up(&tmp_thread->thread_sema);
       list_remove(&tmp_thread->elem);
     }
+  }
+
+  if (wakeup_success) {
+    ASSERT(!wakeup_success);
   }
 }
 

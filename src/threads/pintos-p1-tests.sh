@@ -22,13 +22,13 @@ main () {
     # Begin execution here
     make
     cd build
-
-    #alarm_single
-    alarm_multiple
+    
+    alarm_single
+    #alarm_multiple
     #alarm-simultaneous
     #alarm-priority
-    #alarm-zero
-    #alarm-negative
+    #alarm-zero                 [PASS]
+    #alarm-negative             [PASS]
     #priority-change
     #priority-donate-one
     #priority-donate-multiple

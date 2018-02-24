@@ -269,7 +269,7 @@ thread_current (void)
   ASSERT (t != NULL);
   //The above assert passes.
   //Something is wrong with the magic number.
-  printf("the thread magic number is %d\n", t->magic);
+  //printf("the thread magic number is %d\n", t->magic);
 
   ASSERT (is_thread (t));
   ASSERT (t->status == THREAD_RUNNING);
@@ -460,7 +460,7 @@ is_thread (struct thread *t)
 static void
 init_thread (struct thread *t, const char *name, int priority)
 {
-  printf("initializing a thread\n");
+  //printf("initializing a thread\n");
 
   //enum intr_level old_level;
 
@@ -496,7 +496,7 @@ init_thread (struct thread *t, const char *name, int priority)
 
   //old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
-  
+
   //intr_set_level (old_level);
 }
 
