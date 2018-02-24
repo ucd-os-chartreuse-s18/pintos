@@ -117,7 +117,7 @@ timer_sleep (int64_t ticks)
   current_thread->thread_wake_tick = tick_to_wake;
 
   // put the current thread on a list of sleeping threads
-  list_push_back (&waiting_thread_list, &current_thread->elem);
+  list_push_back (&waiting_thread_list, &current_thread->waiting_elem);
 
   /* down the thread's semaphore, causing it to be blocked until the
    * semaphore is upped by the timer interrupt.
@@ -246,7 +246,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
     if (tmp_thread->thread_wake_tick <= ticks)
     {
       count = 0;
-      itr = list_remove(&tmp_thread->elem);
+      itr = list_remove(&tmp_thread->waiting_elem);
       sema_up(&tmp_thread->thread_sema);
     } else {
       itr = list_next (itr);

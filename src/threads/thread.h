@@ -91,7 +91,7 @@ struct thread
     int priority;                       /* Priority. */
     int64_t thread_wake_tick;           /* The tick the thread should wake up on */
     struct list_elem allelem;           /* List element for all threads list. */
-
+    struct list_elem waiting_elem;      /* For holding in the waiting list */
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
