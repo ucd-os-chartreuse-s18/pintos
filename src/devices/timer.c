@@ -230,7 +230,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
        //itr = list_next (itr))
      )
   {
-    struct thread *tmp_thread = list_entry (itr, struct thread, elem);
+    struct thread *tmp_thread = list_entry (itr, struct thread, waiting_elem);
     
     //printf("%d\n", count);
     count++;
