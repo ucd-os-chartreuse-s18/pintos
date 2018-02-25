@@ -137,6 +137,13 @@ void thread_foreach (thread_action_func *, void *);
 int thread_get_priority (void);
 void thread_set_priority (int);
 
+/* This matches the typedef defined in list.h for a
+ * comparator function. I am not exactly sure how aux 
+ * is supposed to be used */
+bool thread_priority_less (const struct list_elem *a,
+                           const struct list_elem *b,
+                           void *aux);
+
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);

@@ -247,9 +247,9 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  //Bubble element into place using priority here?
-  //Or just do a plain sort every tick?
-  list_push_back (&ready_list, &t->elem);
+  
+  list_insert_ordered (&ready_list, &t->elem, thread_priority_less, NULL);
+  //old: list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -328,9 +328,12 @@ thread_yield (void)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
-  //TODO Bubble element into ready list?
+  
   if (cur != idle_thread)
-    list_push_back (&ready_list, &cur->elem);
+  {
+    list_insert_ordered (&ready_list, &cur->elem, thread_priority_less, NULL);
+    //old: list_push_back (&ready_list, &cur->elem);
+  }
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -370,6 +373,22 @@ thread_get_priority (void)
   //donations into account and some arithmetic
   //should be done here I think)
   return thread_current ()->priority;
+}
+
+bool
+thread_priority_less (const struct list_elem *a,
+                      const struct list_elem *b,
+                      void *aux)
+{
+  //Tried to use &ready_list as the thrid parameter, now going with allelem
+  struct thread t1 = list_entry (a, struct thread, allelem);
+  struct thread t2 = list_entry (b, struct thread, allelem);
+  /* OR.. Actually use t1->thread_get_priority()
+   * Before doing this change, we should consider
+   * the difference in behavior we would expect.
+   * Maybe in the end we can have two separate 
+   * priority 'less' functions. */
+  return (t1.priority < t2.priority);
 }
 
 /* Sets the current thread's nice value to NICE. */
