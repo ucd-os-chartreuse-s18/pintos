@@ -134,16 +134,6 @@ thread_tick (void)
   else
     kernel_ticks++;
   
-  //TODO This is where we can update any 
-  //priorities that change with time. The 
-  //intial priorities should probably be
-  //sorted upon being inserted (bubble),
-  //and I have a feeling that we might
-  //be able to use one of the below functions?:
-  //typedef void thread_action_func (struct thread *t, void *aux);
-  //void thread_foreach (thread_action_func *, void *);
-
-  
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
@@ -198,7 +188,7 @@ thread_create (const char *name, int priority,
   kf->eip = NULL;
   kf->function = function;
   kf->aux = aux;
-
+  
   /* Stack frame for switch_entry(). */
   ef = alloc_frame (t, sizeof *ef);
   ef->eip = (void (*) (void)) kernel_thread;
@@ -210,7 +200,10 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
-
+  
+  if (priority > thread_current()->priority)
+    thread_yield();
+  
   return tid;
 }
 
@@ -274,15 +267,7 @@ thread_current (void)
      have overflowed its stack.  Each thread has less than 4 kB
      of stack, so a few big automatic arrays or moderate
      recursion can cause stack overflow. */
-
-  //is_thread has 2 components:
-  //  1) make sure t != NULL and
-  //  2) check the magic number
-  ASSERT (t != NULL);
-  //The above assert passes.
-  //Something is wrong with the magic number.
-  //printf("the thread magic number is %d\n", t->magic);
-
+  
   ASSERT (is_thread (t));
   ASSERT (t->status == THREAD_RUNNING);
 
@@ -360,16 +345,19 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
-  //TODO yield the current thread IF the new priority 
-  //is no longer the highest.
+  int old_priority = thread_current ()->priority;
   thread_current ()->priority = new_priority;
-  //Options:
-  //1) Just sort
-  // It is mostly sorted, so it should do best case of O(n)?
-  //2) Remove then Add back 
-  // This also makes sense to me. Which is better?
-  //Removing this until I can test it:
-  //list_sort (&ready_list, &thread_priority_less, NULL);
+  /* Options:
+   * 1) Just sort
+   *  It is mostly sorted, so it should do best case of O(n)?
+   * 2) Remove then Add back 
+   *  This also makes sense to me. Which is better?
+   * 
+   * Removing this until I know I need it:
+   * (priority change works without it)
+   * list_sort (&ready_list, thread_priority_less, NULL); */
+  if (new_priority < old_priority)
+    thread_yield();
 }
 
 /* Returns the current thread's priority. */
