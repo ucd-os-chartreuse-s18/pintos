@@ -195,8 +195,27 @@ lock_acquire (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
-
-  sema_down (&lock->semaphore);
+  
+  //If sema not successful immediately,
+  //do the dontation, then call sema_down 
+  //which will actually wait until success.
+  if (!sema_try_down(&lock->semaphore))
+  {
+    //Just add 1. Maybe the value should depend
+    //on some variable or we should have more 
+    //complex logic since donations are not
+    //strictly additive.
+    lock->holder->alms += 1;
+    //lock->holder->alms = current_thread_priority - holder_priority
+    //then compare current alms with diff and update accordingly
+    sema_down (&lock->semaphore);
+    
+    // Seems we can't continue here until the 
+    // thread with the previous lock gives up
+    // its CPU power.
+  }
+  
+  //sema_down (&lock->semaphore);
   lock->holder = thread_current ();
 }
 
@@ -230,9 +249,30 @@ lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
-
+  
+  //if (lock->holder->alms > 0)
+    //lock->holder->alms -= 1;
   lock->holder = NULL;
   sema_up (&lock->semaphore);
+  
+  /* If a thread no longer has the highest effective priority
+  * (e.g. because it released a lock), it must immediately
+  * yield the CPU. If a lock is released, but the current
+  * thread still has the highest effective priority, it should
+  * not yield the CPU */
+  //printf("p: %d\n", highest_ready_priority ());
+  
+  int p = highest_ready_priority ();
+  //printing isn't helping now, but ready_list seems 
+  //to always be empty, which makes p always 0. I'm 
+  //not sure though, and this issue seems like a
+  //distraction. I gtg now, but the solution to this 
+  //problem is probably simple.
+  //printf("p: %d\n", p);
+  if (thread_get_priority () < p)
+  {
+    thread_yield();
+  }
 }
 
 /* Returns true if the current thread holds LOCK, false

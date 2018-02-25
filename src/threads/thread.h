@@ -89,6 +89,7 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
+    int alms;                           /* Alms! Alms for the poor! (donation)*/
     int64_t thread_wake_tick;           /* The tick the thread should wake up on */
     struct list_elem allelem;           /* List element for all threads list. */
     struct list_elem waiting_elem;      /* For holding in the waiting list */
@@ -142,6 +143,8 @@ void thread_set_priority (int);
 bool thread_priority_less (const struct list_elem *a,
                            const struct list_elem *b,
                            void* aux);
+
+int highest_ready_priority (void);
 
 int thread_get_nice (void);
 void thread_set_nice (int);

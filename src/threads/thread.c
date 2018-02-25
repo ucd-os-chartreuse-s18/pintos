@@ -364,10 +364,9 @@ thread_set_priority (int new_priority)
 int
 thread_get_priority (void)
 {
-  //TODO return the effective priority (takes
-  //donations into account and some arithmetic
-  //should be done here I think)
-  return thread_current ()->priority;
+  //Notes on priority donation:
+  //Donations are NOT additive (page 19 of Pintos Doc)
+  return thread_current ()->priority + thread_current ()->alms;
 }
 
 bool
@@ -506,6 +505,7 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  t->alms = 0;
   t->magic = THREAD_MAGIC;
   //printf("[INIT THREAD] magic number is %d\n", t->magic);
 
@@ -559,6 +559,22 @@ next_thread_to_run (void)
     return idle_thread;
   else
     return list_entry (list_pop_front (&ready_list), struct thread, elem);
+}
+
+int
+highest_ready_priority (void)
+{
+  //Option 1:
+  //call next_thread_to_run (which removes it from the list)
+  //then add it back to the list
+  //Option 2:
+  //Use list_entry to peek front
+  if (list_empty (&ready_list)) {
+    return 0;
+  }
+  struct thread *t;
+  t = list_entry (list_front (&ready_list), struct thread, elem);
+  return t->priority; //thread_get_priority is only current thread
 }
 
 /* Completes a thread switch by activating the new thread's page
