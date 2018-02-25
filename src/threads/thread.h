@@ -4,8 +4,8 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
-// not including this may have caused hours of headaches..? not sure
 #include <threads/synch.h>
+
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -138,11 +138,10 @@ int thread_get_priority (void);
 void thread_set_priority (int);
 
 /* This matches the typedef defined in list.h for a
- * comparator function. I am not exactly sure how aux 
- * is supposed to be used */
+ * comparator function. */
 bool thread_priority_less (const struct list_elem *a,
                            const struct list_elem *b,
-                           void *aux);
+                           void* aux);
 
 int thread_get_nice (void);
 void thread_set_nice (int);

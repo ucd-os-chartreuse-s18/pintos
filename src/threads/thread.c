@@ -363,6 +363,13 @@ thread_set_priority (int new_priority)
   //TODO yield the current thread IF the new priority 
   //is no longer the highest.
   thread_current ()->priority = new_priority;
+  //Options:
+  //1) Just sort
+  // It is mostly sorted, so it should do best case of O(n)?
+  //2) Remove then Add back 
+  // This also makes sense to me. Which is better?
+  //Removing this until I can test it:
+  //list_sort (&ready_list, &thread_priority_less, NULL);
 }
 
 /* Returns the current thread's priority. */
@@ -378,17 +385,18 @@ thread_get_priority (void)
 bool
 thread_priority_less (const struct list_elem *a,
                       const struct list_elem *b,
-                      void *aux)
+                      void* aux UNUSED)
 {
-  //Tried to use &ready_list as the thrid parameter, now going with allelem
-  struct thread t1 = list_entry (a, struct thread, allelem);
-  struct thread t2 = list_entry (b, struct thread, allelem);
+  //Think elem is best, but I want to double check.
+  struct thread *t1 = list_entry (a, struct thread, elem);
+  struct thread *t2 = list_entry (b, struct thread, elem);
+  
   /* OR.. Actually use t1->thread_get_priority()
    * Before doing this change, we should consider
    * the difference in behavior we would expect.
    * Maybe in the end we can have two separate 
    * priority 'less' functions. */
-  return (t1.priority < t2.priority);
+  return (t1->priority > t2->priority);
 }
 
 /* Sets the current thread's nice value to NICE. */

@@ -22,11 +22,11 @@ main () {
         #alarm_single
         #alarm_multiple
         #alarm-simultaneous
-        alarm-priority
+        #alarm-priority
         #alarm-zero
         #alarm-negative
         
-        #priority-change
+        priority-change
         #priority-donate-one
         #priority-donate-multiple
         #priority-donate-multiple2
