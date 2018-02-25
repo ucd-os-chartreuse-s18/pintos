@@ -108,7 +108,7 @@ thread_start (void)
   /* Create the idle thread. */
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
-  thread_create ("idle", PRI_MIN, idle, &idle_started);
+  thread_create ("idle", PRI_DEFAULT, idle, &idle_started);
 
   /* Start preemptive thread scheduling. */
   intr_enable ();
@@ -344,6 +344,8 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
+  //TODO yield the current thread IF the new priority 
+  //is no longer the highest.
   thread_current ()->priority = new_priority;
 }
 
@@ -351,6 +353,9 @@ thread_set_priority (int new_priority)
 int
 thread_get_priority (void)
 {
+  //TODO return the effective priority (takes
+  //donations into account and some arithmetic
+  //should be done here I think)
   return thread_current ()->priority;
 }
 
