@@ -133,7 +133,17 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
+  
+  //TODO This is where we can update any 
+  //priorities that change with time. The 
+  //intial priorities should probably be
+  //sorted upon being inserted (bubble),
+  //and I have a feeling that we might
+  //be able to use one of the below functions?:
+  //typedef void thread_action_func (struct thread *t, void *aux);
+  //void thread_foreach (thread_action_func *, void *);
 
+  
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
@@ -237,6 +247,8 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
+  //Bubble element into place using priority here?
+  //Or just do a plain sort every tick?
   list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
   intr_set_level (old_level);
@@ -316,6 +328,7 @@ thread_yield (void)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
+  //TODO Bubble element into ready list?
   if (cur != idle_thread)
     list_push_back (&ready_list, &cur->elem);
   cur->status = THREAD_READY;
@@ -526,6 +539,7 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void)
 {
+  //The ready list should be sorted
   if (list_empty (&ready_list))
     return idle_thread;
   else
