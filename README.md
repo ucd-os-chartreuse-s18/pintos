@@ -28,7 +28,7 @@ as it appears for the src/threads/build makefile that runs
 all tests.
 
 #### Running GDB
-
+###### (this is virtually unused at the moment, and might be replaced by some other means of debugging such as eclipse)
 1. Start Pintos with GDB
 > pintos --gdb -- run *test_name*
 
@@ -43,3 +43,9 @@ either
   > debugpintos
 
 Refer to Appendix E (section 5) for more information on commands that can be run in GDB, including setting breakpoints and continuing.
+
+#### _TODO_
+
+_Primary Task:_
+Working on the priority scheduler now! See page _19_ of the pintos documentation to see the FAQ.
+
