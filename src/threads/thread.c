@@ -574,6 +574,7 @@ highest_ready_priority (void)
   }
   struct thread *t;
   t = list_entry (list_front (&ready_list), struct thread, elem);
+ 
   return t->priority; //thread_get_priority is only current thread
 }
 

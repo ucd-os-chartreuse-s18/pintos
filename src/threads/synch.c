@@ -113,9 +113,23 @@ sema_up (struct semaphore *sema)
   ASSERT (sema != NULL);
 
   old_level = intr_disable ();
+
+  /* 
+   * Sort the semaphore's waiter list based on priority and wake
+   * the highest priority thread first (front of list)
+   */
+
   if (!list_empty (&sema->waiters)) 
+  {
+    list_sort(&sema->waiters, &thread_priority_less, NULL);
+
+    /* since we just sorted the list based on priority, the front
+     * item should be the highest priority thread, now we just
+     * unblock the first item on the list
+     */
     thread_unblock (list_entry (list_pop_front (&sema->waiters),
                                 struct thread, elem));
+  }
   sema->value++;
   intr_set_level (old_level);
 }

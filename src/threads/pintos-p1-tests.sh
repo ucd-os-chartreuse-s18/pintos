@@ -28,7 +28,7 @@ main () {
         
         #priority-change
         
-        priority-donate-one
+        #priority-donate-one
         #priority-donate-multiple
         #priority-donate-multiple2
         #priority-donate-nest
@@ -36,7 +36,7 @@ main () {
         #priority-donate-lower
         #priority-fifo
         #priority-preempt
-        #priority-sema
+        priority-sema
         #priority-condvar 
         #priority-donate-chain
         
