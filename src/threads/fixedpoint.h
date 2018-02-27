@@ -22,14 +22,14 @@ typedef struct
 
 int fix_to_int_floor (fixed_point x);     // convert fixed to int, round toward zero
 int fix_to_int_round (fixed_point x);     // convert fixed to int, normal rounding
-fixed_point int_to_fix (int n);         // convert integer to 17.14 fixed
+fixed_point int_to_fix (int n);           // convert integer to 17.14 fixed
 fixed_point add_fix_fix (fixed_point x, fixed_point y); // add fixed pt values
-fixed_point sub_fix_fix (fixed_point x, fixed_point y); // subtracted fix pt values
 fixed_point add_int_fix (fixed_point x, int n); // add an integer to a fixed point
+fixed_point sub_fix_fix (fixed_point x, fixed_point y); // subtracted fix pt values
 fixed_point sub_int_fix_(fixed_point x, int n); // sub an integer from a fixed point
-fixed_point mul_fix_fix (fixed_point x, fixed_point y);// multiply two fixed points
-fixed_point mul_int_fix (fixed_point x, int n);        // multiply an int and a fixed
-fixed_point div_fix_fix (fixed_point x, fixed_point y);// divide a fixed by a fixed
+fixed_point mul_fix_fix (fixed_point x, fixed_point y); // multiply two fixed points
+fixed_point mul_int_fix (fixed_point x, int n);         // multiply an int and a fixed
+fixed_point div_fix_fix (fixed_point x, fixed_point y); // divide a fixed by a fixed
 fixed_point div_fix_int (fixed_point x, int n); // divide a fixed by an integer
 
 #endif
