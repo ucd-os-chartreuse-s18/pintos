@@ -22,11 +22,11 @@ main () {
         #alarm_single
         #alarm_multiple
         #alarm-simultaneous
-        #alarm-priority
+        alarm-priority
         #alarm-zero
         #alarm-negative
         
-        #priority-change
+        priority-change
         
         #priority-donate-one
         #priority-donate-multiple
@@ -34,10 +34,10 @@ main () {
         #priority-donate-nest
         #priority-donate-sema
         #priority-donate-lower
-        #priority-fifo
-        #priority-preempt
+        priority-fifo
+        priority-preempt
         priority-sema
-        #priority-condvar 
+        priority-condvar 
         #priority-donate-chain
         
         #mlfqs-load-1

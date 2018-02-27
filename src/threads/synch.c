@@ -121,16 +121,22 @@ sema_up (struct semaphore *sema)
 
   if (!list_empty (&sema->waiters)) 
   {
+    //trying to get list_min to work here, for now use a sorted
+    //list and pop the front off
     list_sort(&sema->waiters, &thread_priority_less, NULL);
 
-    /* since we just sorted the list based on priority, the front
-     * item should be the highest priority thread, now we just
-     * unblock the first item on the list
-     */
     thread_unblock (list_entry (list_pop_front (&sema->waiters),
                                 struct thread, elem));
   }
+
   sema->value++;
+
+  int p = highest_ready_priority ();
+
+  if (thread_get_priority() < p)
+  {
+    thread_yield();
+  }
   intr_set_level (old_level);
 }
 
@@ -371,8 +377,11 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
   ASSERT (lock_held_by_current_thread (lock));
 
   if (!list_empty (&cond->waiters)) 
+  {
+    list_sort (&cond->waiters, &thread_priority_less, NULL);
     sema_up (&list_entry (list_pop_front (&cond->waiters),
                           struct semaphore_elem, elem)->semaphore);
+  }
 }
 
 /* Wakes up all threads, if any, waiting on COND (protected by
