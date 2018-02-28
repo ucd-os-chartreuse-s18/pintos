@@ -16,20 +16,92 @@
 
 typedef struct
   {
-    int fixed_val; //32 bit (I think) for holding 17.14 representation fixed points
+    int val; //32 bit (I think) for holding 17.14 representation fixed points
   } fixed_point;
 
+// convert fixed to int, round toward zero
+static inline int 
+fix_to_int_floor (fixed_point x)  
+{
+    return (x.val / F);
+}  
 
-int fix_to_int_floor (fixed_point x);     // convert fixed to int, round toward zero
-int fix_to_int_round (fixed_point x);     // convert fixed to int, normal rounding
-fixed_point int_to_fix (int n);           // convert integer to 17.14 fixed
-fixed_point add_fix_fix (fixed_point x, fixed_point y); // add fixed pt values
-fixed_point add_int_fix (fixed_point x, int n); // add an integer to a fixed point
-fixed_point sub_fix_fix (fixed_point x, fixed_point y); // subtracted fix pt values
-fixed_point sub_int_fix_(fixed_point x, int n); // sub an integer from a fixed point
-fixed_point mul_fix_fix (fixed_point x, fixed_point y); // multiply two fixed points
-fixed_point mul_int_fix (fixed_point x, int n);         // multiply an int and a fixed
-fixed_point div_fix_fix (fixed_point x, fixed_point y); // divide a fixed by a fixed
-fixed_point div_fix_int (fixed_point x, int n); // divide a fixed by an integer
+// convert fixed to int, normal rounding
+static inline int 
+fix_to_int_round (fixed_point x) 
+{
+    // best practices guide says to always use brackets
+    // even with one line conditionals
+    if (x.val >= 0)
+    {
+        return ((x + F / 2) / F);
+    } 
+    else
+    {
+        return ((x - F / 2) / F);
+    }
+}  
 
+// convert integer to 17.14 fixed
+static inline fixed_point 
+int_to_fix (int n)  
+{
+    return (n * F);
+}   
+
+// add fixed pt values
+static inline fixed_point  
+add_fix_fix (fixed_point x, fixed_point y)
+{
+    return (x.val + y.val);
+}
+
+// add an integer to a fixed point
+static inline fixed_point  
+add_int_fix (fixed_point x, int n) 
+{
+    return (x.val + n * F); 
+}
+
+// subtracted fix pt values
+static inline fixed_point 
+sub_fix_fix (fixed_point x, fixed_point y)
+{
+    return (x.val + y.val);
+}
+
+// sub an integer from a fixed point
+static inline fixed_point 
+sub_int_fix_(fixed_point x, int n) 
+{
+    return (x.val - n * F);
+}
+
+// multiply two fixed points
+static inline fixed_point 
+mul_fix_fix (fixed_point x, fixed_point y)
+{
+    return (((int64_t)x.val) * y.val / F);
+}
+
+// multiply an int and a fixed
+static inline fixed_point 
+mul_int_fix (fixed_point x, int n)
+{
+    return (x.val * n);
+}
+
+// divide a fixed by a fixed
+static inline fixed_point 
+div_fix_fix (fixed_point x, fixed_point y)
+{
+    return (((int64_t)x.val) * F / y.val);
+}
+
+// divide a fixed by an integer
+static inline fixed_point 
+div_fix_int (fixed_point x, int n)
+{
+    return (x.val / n);
+}
 #endif
