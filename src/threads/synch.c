@@ -377,16 +377,16 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
   ASSERT (lock_held_by_current_thread (lock));
 
   //enum intr_level old_level;
-  int p = highest_ready_priority();
+  //int p = highest_ready_priority();
 
-  if (thread_current()->priority < p)
-  {
+  //if (thread_current()->priority < p)
+  //{
     if (!list_empty (&cond->waiters)) 
     { 
       list_sort (&cond->waiters, &thread_priority_less, NULL);
       sema_up (&list_entry (list_pop_front (&cond->waiters),
                           struct semaphore_elem, elem)->semaphore);
-    }
+    //}
   }
   
 }
