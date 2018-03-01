@@ -19,6 +19,9 @@ main () {
     if (( $BUILD_SUCCESS )); then
         
         cd build
+        
+        fixed_point_test
+        
         #alarm_single
         #alarm_multiple
         #alarm-simultaneous
@@ -27,7 +30,6 @@ main () {
         #alarm-negative
         
         #priority-change
-        
         #priority-donate-one
         #priority-donate-multiple
         #priority-donate-multiple2
@@ -37,7 +39,7 @@ main () {
         #priority-fifo
         #priority-preempt
         #priority-sema
-        priority-condvar 
+        #priority-condvar 
         #priority-donate-chain
         
         #mlfqs-load-1
@@ -54,6 +56,14 @@ main () {
     else 
         echo "Make build failed. No tests were run."
     fi
+}
+
+fixed_point_test() {
+    
+    echo -e "\nBooting pintos for test: fixed-point"
+    pintos -v -k -T 60 --qemu  -- -q  run fixed-point < /dev/null 2> tests/threads/fixed-point.errors |tee tests/threads/fixed-point.output
+    echo -e "\nTest Status:"
+    perl -I../.. ../../tests/threads/fixed-point.ck tests/threads/fixed-point tests/threads/fixed-point.result
 }
 
 alarm_single() {
