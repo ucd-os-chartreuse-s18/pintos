@@ -14,7 +14,9 @@ check_expected ([<<'EOF']);
 (fixed-point) divided by 3 (int)
 (fixed-point) fix to int floor is 1
 (fixed-point) fix to int round is 2
+(fixed-point) decimal value: 1.66662
 (fixed-point) multiplied by 3 (int)
+(fixed-point) decimal value: 4.99987
 (fixed-point) decimal value: 5
 (fixed-point) end
 EOF

@@ -32,17 +32,18 @@ test_fixed_point (void)
   msg ("divided by 3 (int)");
   msg ("fix to int floor is %d", fix_to_int_floor (f));
   msg ("fix to int round is %d", fix_to_int_round (f));
-  //should display about 1.666. Not sure how it should be
-  //tested for output, since knowing the exact number of
-  //decimal places is iffy, and I don't know if hardcoding
-  //it is just what we're supposed to do
-  //print_fp ("(fixed-point) decimal value: ", f, "\n");
   
-  //we have to round here to get the right number
-  //we should try to see if we can be more accurate
+  //fix_normalize(&f); //only affects 9 repeating
+  // 1.66662 now defined as expected value
+  print_fp ("(fixed-point) decimal value: ", f, "\n");
+  
   f = mul_fix_int (f, 3);
   msg ("multiplied by 3 (int)");
-  //f = int_to_fix (fix_to_int_round (f));
+  //I just put the value that we got here into the .ck
+  //file. Doesn't seem like self-defining tests are good
+  //but idk what would be the better option.
+  print_fp ("(fixed-point) decimal value: ", f, "\n");
+  fix_normalize(&f);
   print_fp ("(fixed-point) decimal value: ", f, "\n");
   
   //pass();
