@@ -17,6 +17,12 @@ bool sema_try_down (struct semaphore *);
 void sema_up (struct semaphore *);
 void sema_self_test (void);
 
+/* Student created function, with prototype matching list_less
+ * prototype style.  Sorts semaphores based on their waiter's priorities
+ */
+bool sema_priority_less (const struct list_elem *a,
+                         const struct list_elem *b,
+                         void* aux);
 /* Lock. */
 struct lock 
   {

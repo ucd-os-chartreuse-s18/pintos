@@ -176,6 +176,7 @@ sema_test_helper (void *sema_)
       sema_up (&sema[1]);
     }
 }
+
 
 /* Initializes LOCK.  A lock can be held by at most a single
    thread at any given time.  Our locks are not "recursive", that
@@ -376,12 +377,12 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
   ASSERT (!intr_context ());
   ASSERT (lock_held_by_current_thread (lock));
 
-  if (!list_empty (&cond->waiters)) 
-  { 
-    list_sort (&cond->waiters, &thread_priority_less, NULL);
-    sema_up (&list_entry (list_pop_front (&cond->waiters),
+if (!list_empty (&cond->waiters)) 
+{ 
+list_sort (&cond->waiters, &sema_priority_less, NULL);
+   sema_up (&list_entry (list_pop_front (&cond->waiters),
                           struct semaphore_elem, elem)->semaphore);
-  }
+}
   
 }
 
@@ -399,4 +400,30 @@ cond_broadcast (struct condition *cond, struct lock *lock)
 
   while (!list_empty (&cond->waiters))
     cond_signal (cond, lock);
+}
+
+bool
+sema_priority_less (const struct list_elem *a,
+                    const struct list_elem *b,
+                    void* aux UNUSED)
+{
+  // get the semaphore elements from the encapsulated elems
+  struct semaphore_elem *s1 = list_entry(a, struct semaphore_elem, elem);
+  struct semaphore_elem *s2 = list_entry(b, struct semaphore_elem, elem);
+
+  /* make sure the semaphore wait lists are in order of priority
+   * we may remove this once stuff is working, if we are inserting in
+   * order, or if I can figure out how to grab list_max in these situations
+   * quick and dirty method for now - it works.
+   */
+
+  list_sort (&s1->semaphore.waiters, &thread_priority_less, NULL);
+  list_sort (&s2->semaphore.waiters, &thread_priority_less, NULL);
+
+  struct thread *t1 = list_entry (list_front (&s1->semaphore.waiters),
+                                  struct thread, elem);
+  struct thread *t2 = list_entry (list_front (&s2->semaphore.waiters),
+                                  struct thread, elem);
+
+  return (t1->priority > t2->priority);
 }
