@@ -14,6 +14,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stddef.h>
 
 #define F 16384 // 2**q == 2**14 == 16384, Pintos manual B-6
@@ -28,6 +29,7 @@ typedef struct fp fixed_point;
 static inline int fix_to_int_floor (const fixed_point x);
 static inline int fix_to_int_round (const fixed_point x);
 static inline int fix_get_dec (const fixed_point x);
+static void fix_set_dec (fixed_point *x, int dec);
 static inline fixed_point int_to_fix (int n);
 
 //Function overloading is not a c feature. Maybe using
@@ -47,8 +49,8 @@ static inline fixed_point mul_fix_int (const fixed_point x, int n);
 static inline fixed_point div_fix_fix (const fixed_point x, fixed_point y);
 static inline fixed_point div_fix_int (const fixed_point x, int n);
 
-static inline bool fix_cmp_less (const fixed_point p1, const fixed_point p2);
-
+//static inline bool fix_cmp_less (const fixed_point p1, const fixed_point p2);
+static inline void fix_normalize (fixed_point *x);
 // convert fixed to int, round toward zero
 int fix_to_int_floor (const fixed_point x)  
 {
@@ -72,6 +74,12 @@ int fix_get_dec (const fixed_point x)
     long long tmp = dec * 100000;
     tmp /= F;
     return (int) tmp;
+}
+
+void fix_set_dec (fixed_point *x, int dec)
+{
+    long long tmp = dec * F / 100000;
+    x->val = fix_to_int_floor (*x) | tmp;
 }
 
 //maybe use snprintf to put result into char buffer?
@@ -172,11 +180,59 @@ fixed_point div_fix_int (const fixed_point x, int n)
 }
 
 //TODO
-bool fix_cmp_less (const fixed_point p1, const fixed_point p2)
+/*
+//Some reason this function declaration caused errors and 
+//couldn't be found by the compiler, telling me the above
+//function prototype was declared static but never defined.
+bool fix_cmp_less (const fixed_point p1, const fixed_point p2) UNUSED
 {
     //compare int then compare dec,
     //OR just compare the values?
     //fix_get_dec (p1) < fix_get_dec (p2)
+} */
+
+/* Nomralize
+ * if n decimals are repeating, continue that pattern
+ * if 9 is repeating, round (this is the only working functionality)
+ * TODO 0 repeating floor?
+ */
+/* UPDATE: What I wanted to fix initially is impossible
+ * Suppose you want to normalize 0.66662 (whose
+ * representation in fix is 10922), you can't get 
+ * any closer. It isn't like each digit is an index
+ * of an array that can be changed. The only other
+ * close values are 10923 (0.66668), 10921 (0.66656),
+ * or even 10924 (0.66674). Maybe some comparison can
+ * be made so that you can get the closest value, but 
+ * this would be more expensive than it needs to be. */
+static inline void fix_normalize (fixed_point *x) {
+    int count[10] = {0};
+    int num= 0;
+    
+    int dec = fix_get_dec (*x);
+    //we will be getting lowest digits first 
+    //the final addition should have the largest
+    //count (need 3 for majority)
+    //if the final addition has a count >= 3 it is repeating 
+    //printf("%d\n", dec);
+    while (dec > 0) {
+        num = dec % 10;
+        ++count[num];
+        dec /= 10;
+    }
+    
+    if (count[num] >= 3) {
+        if (num == 9) {
+            (*x) = int_to_fix (fix_to_int_round (*x));
+            return;
+        }
+        for (int i = 0; i < 5; ++i) {
+            dec *= 10;
+            dec += num;
+        }
+        long long tmp = (dec * F) / 100000;
+        x->val = (fix_to_int_floor (*x) * F) | tmp;
+    }
 }
 
 #endif
