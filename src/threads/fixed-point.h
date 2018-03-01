@@ -14,7 +14,7 @@
 
 #define F 16384 // 2**q == 2**14 == 16384, Pintos manual B-6
 
-typedef struct
+typedef struct fixed
   {
     int val; //32 bit (I think) for holding 17.14 representation fixed points
   } fixed_point;
@@ -46,62 +46,80 @@ fix_to_int_round (fixed_point x)
 static inline fixed_point 
 int_to_fix (int n)  
 {
-    return (n * F);
+    fixed_point fxp;
+    fxp->val = n * F
+    return fxp;
 }   
 
 // add fixed pt values
 static inline fixed_point  
 add_fix_fix (fixed_point x, fixed_point y)
 {
-    return (x.val + y.val);
+    fixed_point fxp;
+    fxp->val = x.val + y.val;
+    return fxp;
 }
 
 // add an integer to a fixed point
 static inline fixed_point  
 add_int_fix (fixed_point x, int n) 
 {
-    return (x.val + n * F); 
+    fixed_point fxp;
+    fxp->val = x.val + n * F;
+    return (fxp); 
 }
 
 // subtracted fix pt values
 static inline fixed_point 
 sub_fix_fix (fixed_point x, fixed_point y)
 {
-    return (x.val + y.val);
+    fixed_point fxp;
+    fxp->val = x.val + y.val;
+    return (fxp);
 }
 
 // sub an integer from a fixed point
 static inline fixed_point 
 sub_int_fix_(fixed_point x, int n) 
 {
-    return (x.val - n * F);
+    fixed_point fxp;
+    fxp->val = (x.val - n * F);
+    return (fxp);
 }
 
 // multiply two fixed points
 static inline fixed_point 
 mul_fix_fix (fixed_point x, fixed_point y)
 {
-    return (((int64_t)x.val) * y.val / F);
+    fixed_point fxp;
+    fxp->val = (int32_t)((int64_t)x.val * y.val / F)
+    return (fxp);;
 }
 
 // multiply an int and a fixed
 static inline fixed_point 
 mul_int_fix (fixed_point x, int n)
 {
-    return (x.val * n);
+    fixed_point fxp;
+    fxp->val = x.val * n;
+    return (fxp);
 }
 
 // divide a fixed by a fixed
 static inline fixed_point 
 div_fix_fix (fixed_point x, fixed_point y)
 {
-    return (((int64_t)x.val) * F / y.val);
+    fixed_point fxp;
+    fxp->val = (int32_t)((int64_t)x.val * F / y.val)
+    return (fxp);
 }
 
 // divide a fixed by an integer
 static inline fixed_point 
 div_fix_int (fixed_point x, int n)
 {
-    return (x.val / n);
+    fixed_point fxp;
+    fxp->val = x.val / n);
+    return (fxp);
 }
 #endif
