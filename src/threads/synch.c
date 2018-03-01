@@ -377,7 +377,7 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
   ASSERT (lock_held_by_current_thread (lock));
 
   //enum intr_level old_level;
-  int p = highest_ready_priority;
+  int p = highest_ready_priority();
 
   if (thread_current()->priority < p)
   {
