@@ -393,9 +393,27 @@ thread_priority_less (const struct list_elem *a,
 
 /* Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice UNUSED)
+thread_set_nice (int nice)
 {
-  /* Not yet implemented. */
+  // set the niceness
+  thread_current ()->niceness = nice;
+
+  // calculate the thread's new priority based on niceness
+  // **** This may not work as currently implemented, need to figure out
+  //  ***** fixed pt implications
+
+  thread_current ()->priority = PRI_MAX - (fix_to_int_floor (thread_current ()->recent_cpu) / 4) - (nice * 2);
+
+  // thread should yield if its new priority is not the highest priority
+  if (!list_empty (&ready_list))
+  {
+    struct list_elem *temp_elem = list_max (&ready_list, thread_priority_less, NULL);
+    struct thread *t = list_entry (temp_elem, struct thread, elem);
+    if (thread_current ()->priority < t->priority)
+    {
+       thread_yield ();
+    }
+  }
 }
 
 /* Returns the current thread's nice value. */
