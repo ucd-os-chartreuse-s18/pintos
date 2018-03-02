@@ -244,11 +244,12 @@ thread_unblock (struct thread *t)
   list_insert_ordered (&ready_list, &t->elem, thread_priority_less, NULL);
   //old: list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
-
- // if (t->priority > thread_current()->priority)
- // {
- //   thread_yield();
-  //}
+  
+  /*
+  if (t->priority > thread_current()->priority)
+  {
+    thread_yield();
+  } //*/
   intr_set_level (old_level);
 }
 
@@ -351,6 +352,11 @@ void
 thread_set_priority (int new_priority)
 {
   int old_priority = thread_current ()->priority;
+  int diff = old_priority - new_priority;
+  if (diff > 0)
+  {
+    thread_current ()->alms += diff;
+  }
   thread_current ()->priority = new_priority;
   /* Options:
    * 1) Just sort
@@ -498,9 +504,9 @@ static void
 init_thread (struct thread *t, const char *name, int priority)
 {
   //printf("initializing a thread\n");
-
+  
   //enum intr_level old_level;
-
+  
   ASSERT (t != NULL);
   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
   ASSERT (name != NULL);
@@ -574,12 +580,13 @@ highest_ready_priority (void)
   //then add it back to the list
   //Option 2:
   //Use list_entry to peek front
+  //printf("empty: %d", list_empty (&ready_list));
   if (list_empty (&ready_list)) {
     return 0;
   }
   struct thread *t;
   t = list_entry (list_front (&ready_list), struct thread, elem);
- 
+  //printf("%d\n", t->priority);
   return t->priority; //thread_get_priority is only current thread
 }
 

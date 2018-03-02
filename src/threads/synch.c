@@ -132,7 +132,7 @@ sema_up (struct semaphore *sema)
   sema->value++;
 
   int p = highest_ready_priority ();
-
+  //printf("p: %d\n", p);
   if (thread_get_priority() < p)
   {
     thread_yield();
@@ -227,7 +227,12 @@ lock_acquire (struct lock *lock)
     //complex logic since donations are not
     //strictly additive.
     //lock->holder->alms += 1;
-    //lock->holder->alms = current_thread_priority - holder_priority
+    int alms = thread_current ()->priority - lock->holder->priority;
+    if (alms > 0) {
+      if (alms > lock->holder->alms) {
+        lock->holder->alms = alms;
+      }
+    }
     //then compare current alms with diff and update accordingly
     sema_down (&lock->semaphore);
     
@@ -271,8 +276,10 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
   
-  //if (lock->holder->alms > 0)
-    //lock->holder->alms -= 1;
+  //printf("s %d\n", lock->holder->status); //always running
+  //this might work if it didn't seem lock_release was called every second
+  //lock->holder->alms = 0;
+  //printf("A%d\n", lock->holder->alms);
   lock->holder = NULL;
   sema_up (&lock->semaphore);
   
@@ -283,17 +290,32 @@ lock_release (struct lock *lock)
   * not yield the CPU */
   //printf("p: %d\n", highest_ready_priority ());
   
+  //if (list_empty (ready_list)) {
+  //  printf("empty\n");
+  //} else printf("not empty\n");
   int p = highest_ready_priority ();
-  //printing isn't helping now, but ready_list seems 
-  //to always be empty, which makes p always 0. I'm 
-  //not sure though, and this issue seems like a
-  //distraction. I gtg now, but the solution to this 
-  //problem is probably simple.
-  //printf("p: %d\n", p);
-  if (thread_get_priority () < p)
+  if (p > 0) {
+    //printf("c: %d\np: %d\n", thread_get_priority (), p);
+  }
+  //printf("c: %d\np: %d\n", thread_get_priority (), p);
+  //if (thread_get_priority () < p) //<=
   {
+    //printf("y\n");
+    //lock->holder->alms = 0;
     thread_yield();
   }
+  
+  /*
+  If you have some priority a, and b gets donated, then if b is larger
+  than a, the difference of a and b should become alms. If that
+  difference happens to be smaller than the value of alms that alreadys
+  exists, then the highest value wins.
+  BTW, since the last class, it would seem that I need a list so that I
+  can figure out the highest donation that corresponds to each lock. So
+  that when one lock is released (and its donation), then the other
+  lock’s highest donation takes over. It would need to be stored
+  internally, because the action of a thread donating only happens once
+  */
 }
 
 /* Returns true if the current thread holds LOCK, false
