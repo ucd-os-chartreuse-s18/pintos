@@ -25,40 +25,16 @@ struct fp
 };
 typedef struct fp fixed_point;
 
-/* FUNCTION PROTOTYPES */
-static inline int fix_to_int_floor (const fixed_point x);
-static inline int fix_to_int_round (const fixed_point x);
-static inline int fix_get_dec (const fixed_point x);
-static void fix_set_dec (fixed_point *x, int dec);
-static inline fixed_point int_to_fix (int n);
 
-//Function overloading is not a c feature. Maybe using
-//the macro _Generic would work, but idk how.
-//static inline void print (const fixed_point);
-//static inline void print (char*, const fixed_point);
-//static inline void print (const fixed_point, char*);
-static inline void print_fp (const char*, const fixed_point, const char*);
-
-static inline fixed_point add_fix_fix (const fixed_point x, fixed_point y);
-static inline fixed_point add_fix_int (const fixed_point x, int n);
-static inline fixed_point sub_fix_fix (const fixed_point x, fixed_point y);
-static inline fixed_point sub_fix_int (const fixed_point x, int n);
-
-static inline fixed_point mul_fix_fix (const fixed_point x, fixed_point y);
-static inline fixed_point mul_fix_int (const fixed_point x, int n);
-static inline fixed_point div_fix_fix (const fixed_point x, fixed_point y);
-static inline fixed_point div_fix_int (const fixed_point x, int n);
-
-//static inline bool fix_cmp_less (const fixed_point p1, const fixed_point p2);
-static inline void fix_normalize (fixed_point *x);
-// convert fixed to int, round toward zero
-int fix_to_int_floor (const fixed_point x)  
+static inline int 
+fix_to_int_floor (const fixed_point x)  
 {
     return (x.val / F);
 }
 
 // convert fixed to int, normal rounding
-int fix_to_int_round (const fixed_point x) 
+static inline int 
+fix_to_int_round (const fixed_point x) 
 {
     if (x.val >= 0)
       return ((x.val + F / 2) / F);
@@ -67,7 +43,8 @@ int fix_to_int_round (const fixed_point x)
 }
 
 //Not sure to what degree this is valid
-int fix_get_dec (const fixed_point x)
+static inline int 
+fix_get_dec (const fixed_point x)
 {
     //2**14 == 16384, so a value of 2 would be: 32768
     int dec = x.val % F;
@@ -76,28 +53,15 @@ int fix_get_dec (const fixed_point x)
     return (int) tmp;
 }
 
+static inline 
 void fix_set_dec (fixed_point *x, int dec)
 {
     long long tmp = dec * F / 100000;
     x->val = fix_to_int_floor (*x) | tmp;
 }
 
-//maybe use snprintf to put result into char buffer?
-//we honestly don't need it, so I wouldn't worry about it
-/*
-void print (const fixed_point x) {
-    print ("", x, "");
-}
-
-void print (char *str1, const fixed_point x) {
-    print (str1, x, "");
-}
-
-void print (const fixed_point x, char *str2) {
-    print ("", x, str2);
-}
-*/
-void print_fp (const char *str1, const fixed_point x, const char *str2) {
+static inline void 
+print_fp (const char *str1, const fixed_point x, const char *str2) {
     int num = fix_to_int_floor (x);
     int dec = fix_get_dec (x);
     if (dec) {
@@ -108,7 +72,8 @@ void print_fp (const char *str1, const fixed_point x, const char *str2) {
 }
 
 // convert integer to 17.14 fixed
-fixed_point int_to_fix (int n)  
+static inline fixed_point 
+int_to_fix (int n)  
 {
     fixed_point fxp;
     fxp.val = n * F;
@@ -116,7 +81,8 @@ fixed_point int_to_fix (int n)
 }
 
 // add fixed pt values
-fixed_point add_fix_fix (const fixed_point x, fixed_point y)
+static inline fixed_point 
+add_fix_fix (const fixed_point x, fixed_point y)
 {
     fixed_point fxp;
     fxp.val = x.val + y.val;
@@ -124,7 +90,8 @@ fixed_point add_fix_fix (const fixed_point x, fixed_point y)
 }
 
 // add an integer to a fixed point
-fixed_point add_fix_int (const fixed_point x, int n) 
+static inline fixed_point 
+add_fix_int (const fixed_point x, int n) 
 {
     fixed_point fxp;
     fxp.val = x.val + n * F;
@@ -132,7 +99,8 @@ fixed_point add_fix_int (const fixed_point x, int n)
 }
 
 // subtracted fix pt values
-fixed_point sub_fix_fix (const fixed_point x, fixed_point y)
+static inline fixed_point 
+ub_fix_fix (const fixed_point x, fixed_point y)
 {
     fixed_point fxp;
     fxp.val = x.val + y.val;
@@ -140,7 +108,8 @@ fixed_point sub_fix_fix (const fixed_point x, fixed_point y)
 }
 
 // sub an integer from a fixed point
-fixed_point sub_fix_int (const fixed_point x, int n) 
+static inline fixed_point 
+sub_fix_int (const fixed_point x, int n) 
 {
     fixed_point fxp;
     fxp.val = (x.val - n * F);
@@ -148,7 +117,8 @@ fixed_point sub_fix_int (const fixed_point x, int n)
 }
 
 // multiply two fixed points
-fixed_point mul_fix_fix (const fixed_point x, fixed_point y)
+static inline fixed_point 
+mul_fix_fix (const fixed_point x, fixed_point y)
 {
     fixed_point fxp;
     fxp.val = (int32_t) ((int64_t) x.val * y.val / F);
@@ -156,7 +126,8 @@ fixed_point mul_fix_fix (const fixed_point x, fixed_point y)
 }
 
 // multiply an int and a fixed
-fixed_point mul_fix_int (const fixed_point x, int n)
+static inline fixed_point 
+mul_fix_int (const fixed_point x, int n)
 {
     fixed_point fxp;
     fxp.val = x.val * n;
@@ -164,7 +135,8 @@ fixed_point mul_fix_int (const fixed_point x, int n)
 }
 
 // divide a fixed by a fixed
-fixed_point div_fix_fix (const fixed_point x, fixed_point y)
+static inline fixed_point 
+div_fix_fix (const fixed_point x, fixed_point y)
 {
     fixed_point fxp;
     fxp.val = (int32_t) ((int64_t) x.val * F / y.val);
@@ -172,7 +144,8 @@ fixed_point div_fix_fix (const fixed_point x, fixed_point y)
 }
 
 // divide a fixed by an integer
-fixed_point div_fix_int (const fixed_point x, int n)
+static inline fixed_point 
+div_fix_int (const fixed_point x, int n)
 {
     fixed_point fxp;
     fxp.val = (x.val / n);
@@ -205,7 +178,8 @@ bool fix_cmp_less (const fixed_point p1, const fixed_point p2) UNUSED
  * or even 10924 (0.66674). Maybe some comparison can
  * be made so that you can get the closest value, but 
  * this would be more expensive than it needs to be. */
-static inline void fix_normalize (fixed_point *x) {
+static inline void 
+fix_normalize (fixed_point *x) {
     int count[10] = {0};
     int num= 0;
     
