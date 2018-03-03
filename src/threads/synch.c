@@ -132,7 +132,6 @@ sema_up (struct semaphore *sema)
   sema->value++;
 
   int p = highest_ready_priority ();
-  //printf("p: %d\n", p);
   if (thread_get_priority() < p)
   {
     thread_yield();
@@ -197,7 +196,6 @@ void
 lock_init (struct lock *lock)
 {
   ASSERT (lock != NULL);
-
   lock->holder = NULL;
   sema_init (&lock->semaphore, 1);
 }
@@ -222,26 +220,16 @@ lock_acquire (struct lock *lock)
   //which will actually wait until success.
   if (!sema_try_down(&lock->semaphore))
   {
-    //Just add 1. Maybe the value should depend
-    //on some variable or we should have more 
-    //complex logic since donations are not
-    //strictly additive.
-    //lock->holder->alms += 1;
     int alms = thread_current ()->priority - lock->holder->priority;
     if (alms > 0) {
       if (alms > lock->holder->alms) {
         lock->holder->alms = alms;
       }
     }
-    //then compare current alms with diff and update accordingly
     sema_down (&lock->semaphore);
-    
-    // Seems we can't continue here until the 
-    // thread with the previous lock gives up
-    // its CPU power.
   }
   
-  //sema_down (&lock->semaphore);
+  //list_push_back (&locks_held, &lock->held_elem);
   lock->holder = thread_current ();
 }
 
@@ -261,12 +249,14 @@ lock_try_acquire (struct lock *lock)
 
   success = sema_try_down (&lock->semaphore);
   if (success)
+  {
+    //list_push_back (&locks_held, &lock->held_elem);
     lock->holder = thread_current ();
+  }
   return success;
 }
 
 /* Releases LOCK, which must be owned by the current thread.
-
    An interrupt handler cannot acquire a lock, so it does not
    make sense to try to release a lock within an interrupt
    handler. */
@@ -276,10 +266,9 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
   
-  //printf("s %d\n", lock->holder->status); //always running
-  //this might work if it didn't seem lock_release was called every second
   //lock->holder->alms = 0;
   //printf("A%d\n", lock->holder->alms);
+  //list_remove (&lock->held_elem);
   lock->holder = NULL;
   sema_up (&lock->semaphore);
   
@@ -290,32 +279,13 @@ lock_release (struct lock *lock)
   * not yield the CPU */
   //printf("p: %d\n", highest_ready_priority ());
   
-  //if (list_empty (ready_list)) {
-  //  printf("empty\n");
-  //} else printf("not empty\n");
   int p = highest_ready_priority ();
-  if (p > 0) {
-    //printf("c: %d\np: %d\n", thread_get_priority (), p);
-  }
-  //printf("c: %d\np: %d\n", thread_get_priority (), p);
   //if (thread_get_priority () < p) //<=
   {
-    //printf("y\n");
     //lock->holder->alms = 0;
     thread_yield();
   }
   
-  /*
-  If you have some priority a, and b gets donated, then if b is larger
-  than a, the difference of a and b should become alms. If that
-  difference happens to be smaller than the value of alms that alreadys
-  exists, then the highest value wins.
-  BTW, since the last class, it would seem that I need a list so that I
-  can figure out the highest donation that corresponds to each lock. So
-  that when one lock is released (and its donation), then the other
-  lock’s highest donation takes over. It would need to be stored
-  internally, because the action of a thread donating only happens once
-  */
 }
 
 /* Returns true if the current thread holds LOCK, false
@@ -343,7 +313,6 @@ void
 cond_init (struct condition *cond)
 {
   ASSERT (cond != NULL);
-
   list_init (&cond->waiters);
 }
 
@@ -399,12 +368,12 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
   ASSERT (!intr_context ());
   ASSERT (lock_held_by_current_thread (lock));
 
-if (!list_empty (&cond->waiters)) 
-{ 
-list_sort (&cond->waiters, &sema_priority_less, NULL);
-   sema_up (&list_entry (list_pop_front (&cond->waiters),
-                          struct semaphore_elem, elem)->semaphore);
-}
+  if (!list_empty (&cond->waiters)) 
+  { 
+    list_sort (&cond->waiters, &sema_priority_less, NULL);
+    sema_up (&list_entry (list_pop_front (&cond->waiters),
+                 struct semaphore_elem, elem)->semaphore);
+  }
   
 }
 

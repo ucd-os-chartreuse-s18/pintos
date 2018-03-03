@@ -91,15 +91,23 @@ struct thread
     int priority;                       /* Priority. */
     int niceness;                       /* Thread's nice value, for MLFQS */
     int alms;                           /* Alms! Alms for the poor! (donation) */
-    fixed_point recent_cpu;      /* keep track of the current threads CPU time */
+    fixed_point recent_cpu;             /* keep track of the current thread's CPU time */
     int64_t thread_wake_tick;           /* The tick the thread should wake up on */
-    struct list_elem allelem;           /* List element for all threads list. */
-    struct list_elem waiting_elem;      /* For holding in the waiting list */
-    /* Shared between thread.c and synch.c. */
-    struct list_elem elem;              /* List element. */
-
-    // added semaphore
+    
+    struct list donators;
+    struct list_elem allelem;           /* all_list */
+    struct list_elem elem;              /* ready_list, sema->waiters */
+    struct list_elem donor_elem;        /* donators */
+    struct list_elem lock_waiter_elem;  /* lock->waiters */
+    struct list_elem waiting_elem;      /* For use in timer_sleep */
+    
+    /* For multiple donate */
+    //Note: we could do this but I decided against it. If
+    //you want to know why, just ask for clarification.
+    //struct list locks_held; /* Locks that this thread has aquired. */
+    
     struct semaphore thread_sema;
+    
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
