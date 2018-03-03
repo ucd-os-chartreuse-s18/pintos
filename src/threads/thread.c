@@ -420,8 +420,7 @@ thread_set_nice (int nice)
 int
 thread_get_nice (void)
 {
-  /* Not yet implemented. */
-  return 0;
+  return thread_current ()->niceness;
 }
 
 /* Returns 100 times the system load average. */
