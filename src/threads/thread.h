@@ -98,7 +98,7 @@ struct thread
     struct list_elem allelem;           /* all_list */
     struct list_elem elem;              /* ready_list, sema->waiters */
     struct list_elem donor_elem;        /* donators */
-    struct list_elem lock_waiter_elem;  /* lock->waiters */
+    //struct list_elem lock_waiter_elem;  /* lock->waiters */
     struct list_elem waiting_elem;      /* For use in timer_sleep */
     
     /* For multiple donate */
