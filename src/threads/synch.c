@@ -26,7 +26,11 @@
    MODIFICATIONS.
 */
 
-//#define DONATE_CHANGES
+#define DONATE_CHANGES
+#define ADD_TO_DONATORS
+//#define ADD_TO_WAITERS
+//#define PAST_SEMA_DOWN
+//#define REMOVING_WAITERS
 
 #include "threads/synch.h"
 #include <stdio.h>
@@ -111,6 +115,8 @@ sema_try_down (struct semaphore *sema)
 void
 sema_up (struct semaphore *sema) 
 {
+  ASSERT (sema != NULL);
+  
   enum intr_level old_level = intr_disable ();
   
   if (!list_empty (&sema->waiters)) 
@@ -219,12 +225,13 @@ lock_acquire (struct lock *lock)
     
     //Add to donator's list belonging to thread
     //Sorted by priority so that we can select the highest
-  #ifdef DONATE_CHANGES
+  #if defined(DONATE_CHANGES) && defined(ADD_TO_DONATORS)
     struct list *l = &lock->holder->donators;
     struct list_elem *e = &thread_current ()->donor_elem;
     list_insert_ordered (l, e, thread_priority_less, NULL);
     //printf("d1 %d\n", thread_current ()->priority);
-    
+  #endif
+  
     /*
     //DEBUG print priorities in their order
     int j = 0;
@@ -235,6 +242,13 @@ lock_acquire (struct lock *lock)
       printf ("%d %d\n", j, t->priority);
       j++;
     } //*/
+  
+  #if defined(DONATE_CHANGES) && defined(ADD_TO_WAITERS)
+    
+    #ifndef ADD_TO_DONATORS
+      struct list *l;
+      struct list_elem *e;
+    #endif
     
     //Add to lock's waiting list (order by time added,
     //though maybe change to priority, or just don't
@@ -257,7 +271,7 @@ lock_acquire (struct lock *lock)
     //struct list_elem *e; //already defined above
     //l = &lock->semaphore.waiters;
   
-  #ifdef DONATE_CHANGES
+  #if defined(DONATE_CHANGES) && defined(PAST_SEMA_DOWN)
   
     int i = 0;
     for (e = list_begin (l); e != list_end (l); e = list_next (e))
@@ -342,7 +356,7 @@ lock_release (struct lock *lock)
   
   enum intr_level old_level = intr_disable ();
   
-#ifdef DONATE_CHANGES
+#if defined(DONATE_CHANGES) && defined(REMOVING_WAITERS)
 
   struct list_elem *e;
   struct list *l = &lock->semaphore.waiters;
