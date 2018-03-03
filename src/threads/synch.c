@@ -26,6 +26,8 @@
    MODIFICATIONS.
 */
 
+//#define DONATE_CHANGES
+
 #include "threads/synch.h"
 #include <stdio.h>
 #include <string.h>
@@ -60,15 +62,16 @@ sema_init (struct semaphore *sema, unsigned value)
 void
 sema_down (struct semaphore *sema) 
 {
-  enum intr_level old_level;
-
+  
   ASSERT (sema != NULL);
   ASSERT (!intr_context ());
-
-  old_level = intr_disable ();
+  
+  enum intr_level old_level = intr_disable ();
   while (sema->value == 0) 
     {
-      list_push_back (&sema->waiters, &thread_current ()->elem);
+      //list_push_back (&sema->waiters, &thread_current ()->elem);
+      list_insert_ordered (&sema->waiters, &thread_current ()->elem,
+                                        thread_priority_less, NULL);
       thread_block ();
     }
   sema->value--;
@@ -108,33 +111,26 @@ sema_try_down (struct semaphore *sema)
 void
 sema_up (struct semaphore *sema) 
 {
-  enum intr_level old_level;
-
-  ASSERT (sema != NULL);
-
-  old_level = intr_disable ();
-
-  /* 
-   * Sort the semaphore's waiter list based on priority and wake
-   * the highest priority thread first (front of list)
-   */
-
+  enum intr_level old_level = intr_disable ();
+  
   if (!list_empty (&sema->waiters)) 
   {
-    //trying to get list_min to work here, for now use a sorted
-    //list and pop the front off
-    list_sort(&sema->waiters, &thread_priority_less, NULL);
+    //I put list_insert_ordered in sema_down, so it should be sorted?
+    list_sort(&sema->waiters, thread_priority_less, NULL);
+    
+    //also try list_pop_back if the order seems off
     thread_unblock (list_entry (list_pop_front (&sema->waiters),
                                 struct thread, elem));
   }
-
+  
   sema->value++;
   
   int p = highest_ready_priority ();
-  if (thread_get_priority() < p)
+  if (thread_get_priority () < p)
   {
     thread_yield();
   }
+  
   intr_set_level (old_level);
 }
 
@@ -174,7 +170,6 @@ sema_test_helper (void *sema_)
       sema_up (&sema[1]);
     }
 }
-
 
 /* Initializes LOCK.  A lock can be held by at most a single
    thread at any given time.  Our locks are not "recursive", that
@@ -219,11 +214,27 @@ lock_acquire (struct lock *lock)
   //which will actually wait until success.
   if (!sema_try_down(&lock->semaphore))
   {
+    //ASSERT (intr_get_level () == INTR_OFF); //fails
+    enum intr_level old_level = intr_disable ();
+    
     //Add to donator's list belonging to thread
     //Sorted by priority so that we can select the highest
+  #ifdef DONATE_CHANGES
     struct list *l = &lock->holder->donators;
     struct list_elem *e = &thread_current ()->donor_elem;
-    list_insert_ordered (l, e, &thread_priority_less, NULL);
+    list_insert_ordered (l, e, thread_priority_less, NULL);
+    //printf("d1 %d\n", thread_current ()->priority);
+    
+    /*
+    //DEBUG print priorities in their order
+    int j = 0;
+    //list_sort (l, thread_priority_less, NULL);
+    for (e = list_begin (l); e != list_end (l); e = list_next (e))
+    {
+      struct thread *t = list_entry (e, struct thread, donor_elem);
+      printf ("%d %d\n", j, t->priority);
+      j++;
+    } //*/
     
     //Add to lock's waiting list (order by time added,
     //though maybe change to priority, or just don't
@@ -231,14 +242,12 @@ lock_acquire (struct lock *lock)
     l = &lock->semaphore.waiters;
     e = &thread_current ()->elem;
     list_push_back(l, e);
-    
-    /*
-    //I initially thought this was needed before
-    //the chunk of code below. I'm pushing now,
-    //will continue soon.
-    printf("sd1\n");
+  #endif
+  
+    //*
+    //printf("sd1\n");
     sema_down (&lock->semaphore);
-    printf("sd2\n");
+    //printf("sd2\n");
     //*/
     
     //The current thread is now set to aquire this lock.
@@ -247,23 +256,44 @@ lock_acquire (struct lock *lock)
     //donators list.
     //struct list_elem *e; //already defined above
     //l = &lock->semaphore.waiters;
+  
+  #ifdef DONATE_CHANGES
+  
+    int i = 0;
     for (e = list_begin (l); e != list_end (l); e = list_next (e))
     {
+      //printf("t %d\n", i);
+      i++;
       struct thread *t = list_entry (e, struct thread, elem);
       if (t == thread_current ())
       {
-        printf("p: %d\n", t->priority);
+        //printf("p: %d\n", t->priority);
         //remove e from l (no longer waiting)
+        //printf("rm\n");
+        //list_pop_back (l);
         list_remove (e); //commenting this out creates a timeout
+        if (list_empty (l)) {
+          //printf("no waiters\n");
+        }
+        
+        //thread current is still donating to the current thread at this point
       }
       else //put into donor's list
       {
+        //printf("d2 %d\n", t->priority);
         list_insert_ordered (&t->donators, &t->donor_elem,
                              &thread_priority_less, NULL);
       }
     } //*/
-    
+  #endif
+  
+    //intr_set_level (old_level);
+    /*
+    printf ("s1\n");
     sema_down (&lock->semaphore);
+    printf ("s2\n");
+    //*/
+    intr_set_level (old_level);
   }
   
   lock->holder = thread_current ();
@@ -302,7 +332,6 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
   
   lock->holder = NULL;
-  //I should review the order I am doing things in
   sema_up (&lock->semaphore);
   
   //Iterate the lock's waiters to remove that waiter as a donor
@@ -310,13 +339,29 @@ lock_release (struct lock *lock)
   //up upon aquire, however all subsequent donations will be 
   //handled on the fly.
   //Be mindful of the next running thread, whatever that is.
+  
+  enum intr_level old_level = intr_disable ();
+  
+#ifdef DONATE_CHANGES
+
   struct list_elem *e;
   struct list *l = &lock->semaphore.waiters;
+  
+  if (list_empty (l))
+  {
+    //printf ("no l2\n");
+  } else printf ("LOOPING NOW!\n");
   for (e = list_begin (l); e != list_end (l); e = list_next (e))
   {
     struct thread *t = list_entry (e, struct thread, elem);
+    printf ("t %d\n", t->priority);
     list_remove (&t->donor_elem);
   }
+#endif
+
+  intr_set_level (old_level);
+  
+  //sema_up (&lock->semaphore);
   
   /* If a thread no longer has the highest effective priority
   * (e.g. because it released a lock), it must immediately

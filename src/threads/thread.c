@@ -317,7 +317,6 @@ thread_yield (void)
   if (cur != idle_thread)
   {
     list_insert_ordered (&ready_list, &cur->elem, thread_priority_less, NULL);
-    //old: list_push_back (&ready_list, &cur->elem);
   }
   cur->status = THREAD_READY;
   schedule ();
@@ -363,12 +362,31 @@ thread_set_priority (int new_priority)
 int
 thread_get_priority (void)
 {
+  //enum intr_level old_level = intr_disable ();
   struct list *l = &thread_current ()->donators;
   if (!list_empty (l))
   {
-    struct thread *t = list_entry (list_front (l), struct thread, donor_elem);
+    //was front, but order was different from what I thought
+    //it is sorted 32, 33, etc. and not 33, 32?
+    struct thread *t = list_entry (list_back (l), struct thread, donor_elem);
+    
+    /*
+    //DEBUG
+    enum intr_level old_level = intr_disable ();
+    struct list_elem *e;
+    int i = 0;
+    for (e = list_begin (l); e != list_end (l); e = list_next (e))
+    {
+      struct thread *t2 = list_entry (list_front (l), struct thread, donor_elem);
+      printf("%d %d\n", i, t2->priority);
+      i++;
+    }
+    intr_set_level (old_level);
+    //*/
+    //intr_set_level (old_level);
     return t->priority;
   } //else
+  //intr_set_level (old_level);
   return thread_current ()->priority;
   //return thread_current ()->priority + thread_current ()->alms;
 }
@@ -378,7 +396,6 @@ thread_priority_less (const struct list_elem *a,
                       const struct list_elem *b,
                       void* aux UNUSED)
 {
-  //Think elem is best, but I want to double check.
   struct thread *t1 = list_entry (a, struct thread, elem);
   struct thread *t2 = list_entry (b, struct thread, elem);
   return (t1->priority > t2->priority);
@@ -564,6 +581,8 @@ next_thread_to_run (void)
 int
 highest_ready_priority (void)
 {
+  //this interrupt disable causes the timer calibration to time out
+  //enum intr_level old_level = intr_disable ();
   if (list_empty (&ready_list)) {
     return 0;
   }
@@ -572,7 +591,8 @@ highest_ready_priority (void)
   //list_sort (&ready_list, &thread_priority_less, NULL);
   struct thread *t;
   t = list_entry (list_front (&ready_list), struct thread, elem);
-  return t->priority; //thread_get_priority is only current thread
+  //intr_set_level (old_level);
+  return t->priority;
 }
 
 /* Completes a thread switch by activating the new thread's page
