@@ -232,26 +232,36 @@ lock_acquire (struct lock *lock)
     e = &thread_current ()->elem;
     list_push_back(l, e);
     
+    /*
+    //I initially thought this was needed before
+    //the chunk of code below. I'm pushing now,
+    //will continue soon.
+    printf("sd1\n");
+    sema_down (&lock->semaphore);
+    printf("sd2\n");
+    //*/
+    
     //The current thread is now set to aquire this lock.
     //At this point it is expected that there might be
     //waiters on the lock to add to the current thread's
     //donators list.
     //struct list_elem *e; //already defined above
-    l = &lock->semaphore.waiters;
+    //l = &lock->semaphore.waiters;
     for (e = list_begin (l); e != list_end (l); e = list_next (e))
     {
       struct thread *t = list_entry (e, struct thread, elem);
       if (t == thread_current ())
       {
+        printf("p: %d\n", t->priority);
         //remove e from l (no longer waiting)
-        list_remove (e);
+        list_remove (e); //commenting this out creates a timeout
       }
       else //put into donor's list
       {
         list_insert_ordered (&t->donators, &t->donor_elem,
                              &thread_priority_less, NULL);
       }
-    }
+    } //*/
     
     sema_down (&lock->semaphore);
   }
@@ -292,6 +302,7 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
   
   lock->holder = NULL;
+  //I should review the order I am doing things in
   sema_up (&lock->semaphore);
   
   //Iterate the lock's waiters to remove that waiter as a donor
@@ -306,7 +317,7 @@ lock_release (struct lock *lock)
     struct thread *t = list_entry (e, struct thread, elem);
     list_remove (&t->donor_elem);
   }
-  //* 123456789 (just this passes condvar)
+  
   /* If a thread no longer has the highest effective priority
   * (e.g. because it released a lock), it must immediately
   * yield the CPU */
@@ -315,7 +326,6 @@ lock_release (struct lock *lock)
   {
     thread_yield();
   }
-  
 }
 
 /* Returns true if the current thread holds LOCK, false
@@ -404,8 +414,6 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
     sema_up (&list_entry (list_pop_front (&cond->waiters),
                  struct semaphore_elem, elem)->semaphore);
   }
-  
-  //printf("fin");
 }
 
 /* Wakes up all threads, if any, waiting on COND (protected by
