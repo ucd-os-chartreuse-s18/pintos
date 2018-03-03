@@ -242,13 +242,8 @@ thread_unblock (struct thread *t)
   ASSERT (t->status == THREAD_BLOCKED);
   
   list_insert_ordered (&ready_list, &t->elem, thread_priority_less, NULL);
-  //old: list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
-
- // if (t->priority > thread_current()->priority)
- // {
- //   thread_yield();
-  //}
+  
   intr_set_level (old_level);
 }
 
@@ -322,7 +317,6 @@ thread_yield (void)
   if (cur != idle_thread)
   {
     list_insert_ordered (&ready_list, &cur->elem, thread_priority_less, NULL);
-    //old: list_push_back (&ready_list, &cur->elem);
   }
   cur->status = THREAD_READY;
   schedule ();
@@ -351,16 +345,15 @@ void
 thread_set_priority (int new_priority)
 {
   int old_priority = thread_current ()->priority;
+  /*
+  int diff = old_priority - new_priority;
+  if (diff > 0)
+  {
+    thread_current ()->alms += diff;
+  } */
   thread_current ()->priority = new_priority;
-  /* Options:
-   * 1) Just sort
-   *  It is mostly sorted, so it should do best case of O(n)?
-   * 2) Remove then Add back 
-   *  This also makes sense to me. Which is better?
-   * 
-   * Removing this until I know I need it:
-   * (priority change works without it)
-   * list_sort (&ready_list, thread_priority_less, NULL); */
+  
+  //TODO we should probably actually compare to highest_ready_priority?
   if (new_priority < old_priority)
     thread_yield();
 }
@@ -369,9 +362,33 @@ thread_set_priority (int new_priority)
 int
 thread_get_priority (void)
 {
-  //Notes on priority donation:
-  //Donations are NOT additive (page 19 of Pintos Doc)
-  return thread_current ()->priority + thread_current ()->alms;
+  //enum intr_level old_level = intr_disable ();
+  struct list *l = &thread_current ()->donators;
+  if (!list_empty (l))
+  {
+    //was front, but order was different from what I thought
+    //it is sorted 32, 33, etc. and not 33, 32?
+    struct thread *t = list_entry (list_back (l), struct thread, donor_elem);
+    
+    /*
+    //DEBUG
+    enum intr_level old_level = intr_disable ();
+    struct list_elem *e;
+    int i = 0;
+    for (e = list_begin (l); e != list_end (l); e = list_next (e))
+    {
+      struct thread *t2 = list_entry (list_front (l), struct thread, donor_elem);
+      printf("%d %d\n", i, t2->priority);
+      i++;
+    }
+    intr_set_level (old_level);
+    //*/
+    //intr_set_level (old_level);
+    return t->priority;
+  } //else
+  //intr_set_level (old_level);
+  return thread_current ()->priority;
+  //return thread_current ()->priority + thread_current ()->alms;
 }
 
 bool
@@ -379,15 +396,8 @@ thread_priority_less (const struct list_elem *a,
                       const struct list_elem *b,
                       void* aux UNUSED)
 {
-  //Think elem is best, but I want to double check.
   struct thread *t1 = list_entry (a, struct thread, elem);
   struct thread *t2 = list_entry (b, struct thread, elem);
-  
-  /* OR.. Actually use t1->thread_get_priority()
-   * Before doing this change, we should consider
-   * the difference in behavior we would expect.
-   * Maybe in the end we can have two separate 
-   * priority 'less' functions. */
   return (t1->priority > t2->priority);
 }
 
@@ -397,23 +407,27 @@ thread_set_nice (int nice)
 {
   // set the niceness
   thread_current ()->niceness = nice;
-
+  
   // calculate the thread's new priority based on niceness
   // **** This may not work as currently implemented, need to figure out
-  //  ***** fixed pt implications
-
-  thread_current ()->priority = PRI_MAX - (fix_to_int_floor (thread_current ()->recent_cpu) / 4) - (nice * 2);
-
-  // thread should yield if its new priority is not the highest priority
+  //  **** fixed pt implications
+  
+  //not sure if you got this compiling, but I am currently getting the 
+  //error: invalid operands to binary (recent_cpu / 4 is undefined)
+  //thread_current ()->priority = PRI_MAX - (fix_to_int_floor (thread_current ()->recent_cpu / 4) - (nice * 2));
+  
+  // thread should yield if new priority is not the highest priority
   if (!list_empty (&ready_list))
   {
+    //small note by Matt: doesn't thread_priority_less need an &?
     struct list_elem *temp_elem = list_max (&ready_list, thread_priority_less, NULL);
     struct thread *t = list_entry (temp_elem, struct thread, elem);
     if (thread_current ()->priority < t->priority)
     {
-       thread_yield ();
+      thread_yield ();
     }
   }
+  
 }
 
 /* Returns the current thread's nice value. */
@@ -515,9 +529,9 @@ static void
 init_thread (struct thread *t, const char *name, int priority)
 {
   //printf("initializing a thread\n");
-
+  
   //enum intr_level old_level;
-
+  
   ASSERT (t != NULL);
   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
   ASSERT (name != NULL);
@@ -529,30 +543,10 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->alms = 0;
   t->magic = THREAD_MAGIC;
-  //printf("[INIT THREAD] magic number is %d\n", t->magic);
-
-  //Initializing thread semaphore in init instead of thread create.
-  //What value is good? ATM I understand semaphores only if they
-  //behave exactly as locks in how they provide mutual exclusion.
-  //I think we will be using semaphores to sort threads at some point.
-
-  //The value of t's magic changes to 0 when I initialize the semaphore.
-  //Matt, I changed this initialize the semaphore as 0, it was 10
-  sema_init(&t->thread_sema,0);
-
-  //When the ordering is changed, an infinite loop is created. Maybe
-  //reordering was just avoiding the error we needed to see in the
-  //assert? Maybe the semaphore needs to be initialized somewhere else.
-  //t->magic = THREAD_MAGIC;
-
-  //Weird update: now when I uncomment sema_init, instead of getting
-  //an error that tells me the semaphore is NULL, the program runs in
-  //an infinite loop like I previously stated above.
-
-  //old_level = intr_disable ();
+  
+  list_init (&t->donators);
+  sema_init (&t->thread_sema, 0);
   list_push_back (&all_list, &t->allelem);
-
-  //intr_set_level (old_level);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -586,18 +580,18 @@ next_thread_to_run (void)
 int
 highest_ready_priority (void)
 {
-  //Option 1:
-  //call next_thread_to_run (which removes it from the list)
-  //then add it back to the list
-  //Option 2:
-  //Use list_entry to peek front
+  //this interrupt disable causes the timer calibration to time out
+  //enum intr_level old_level = intr_disable ();
   if (list_empty (&ready_list)) {
     return 0;
   }
+  
+  //uncomment if you want to check to see if the list is sorted
+  //list_sort (&ready_list, &thread_priority_less, NULL);
   struct thread *t;
   t = list_entry (list_front (&ready_list), struct thread, elem);
- 
-  return t->priority; //thread_get_priority is only current thread
+  //intr_set_level (old_level);
+  return t->priority;
 }
 
 /* Completes a thread switch by activating the new thread's page
