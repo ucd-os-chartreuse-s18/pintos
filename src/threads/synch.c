@@ -221,7 +221,6 @@ lock_acquire (struct lock *lock)
   {
     //Add to donator's list belonging to thread
     //Sorted by priority so that we can select the highest
-    /* 123456789
     struct list *l = &lock->holder->donators;
     struct list_elem *e = &thread_current ()->donor_elem;
     list_insert_ordered (l, e, &thread_priority_less, NULL);
@@ -232,17 +231,12 @@ lock_acquire (struct lock *lock)
     l = &lock->semaphore.waiters;
     e = &thread_current ()->elem;
     list_push_back(l, e);
-    */
-    
-    //getting stuck at sema_down again. we need to yield somewhere?
-    sema_down (&lock->semaphore);
     
     //The current thread is now set to aquire this lock.
     //At this point it is expected that there might be
     //waiters on the lock to add to the current thread's
     //donators list.
     //struct list_elem *e; //already defined above
-    /* 123456789
     l = &lock->semaphore.waiters;
     for (e = list_begin (l); e != list_end (l); e = list_next (e))
     {
@@ -257,7 +251,9 @@ lock_acquire (struct lock *lock)
         list_insert_ordered (&t->donators, &t->donor_elem,
                              &thread_priority_less, NULL);
       }
-    } */
+    }
+    
+    sema_down (&lock->semaphore);
   }
   
   lock->holder = thread_current ();
@@ -303,15 +299,14 @@ lock_release (struct lock *lock)
   //up upon aquire, however all subsequent donations will be 
   //handled on the fly.
   //Be mindful of the next running thread, whatever that is.
-  /* 123456789
   struct list_elem *e;
   struct list *l = &lock->semaphore.waiters;
   for (e = list_begin (l); e != list_end (l); e = list_next (e))
   {
     struct thread *t = list_entry (e, struct thread, elem);
     list_remove (&t->donor_elem);
-  } */
-  
+  }
+  //* 123456789 (just this passes condvar)
   /* If a thread no longer has the highest effective priority
   * (e.g. because it released a lock), it must immediately
   * yield the CPU */

@@ -31,25 +31,16 @@ main () {
         #alarm-negative
         
         #priority-change
-        
-        #works with old primitive method, but that was
-        #removed and the new method should be updated soon
-        #priority-donate-one
-        
+        priority-donate-one
         #priority-donate-multiple
         #priority-donate-multiple2
         #priority-donate-nest
         #priority-donate-sema
         #priority-donate-lower
-        
         #priority-fifo
         #priority-preempt
         #priority-sema
-        
-        #doesn't work with new changes labelled with 123456789
-        #the test times out. when those are commented 
-        #priority-condvar
-        
+        priority-condvar
         #priority-donate-chain
         
         #mlfqs-load-1
