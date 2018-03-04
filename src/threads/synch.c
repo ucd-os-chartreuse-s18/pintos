@@ -118,7 +118,6 @@ sema_up (struct semaphore *sema)
     //I put list_insert_ordered in sema_down, so it should be sorted?
     list_sort(&sema->waiters, thread_priority_less, NULL);
     
-    //also try list_pop_back if the order seems off
     thread_unblock (list_entry (list_pop_front (&sema->waiters),
                                 struct thread, elem));
   }
@@ -144,7 +143,7 @@ sema_self_test (void)
 {
   struct semaphore sema[2];
   int i;
-
+  
   printf ("Testing semaphores...");
   sema_init (&sema[0], 0);
   sema_init (&sema[1], 0);
@@ -220,10 +219,30 @@ lock_acquire (struct lock *lock)
     //Sorted by priority so that we can select the highest
     struct list *l = &lock->holder->donators;
     struct list_elem *e = &thread_current ()->donor_elem;
-    list_insert_ordered (l, e, thread_priority_less, NULL);
+        
+    list_insert_ordered (l, e, donate_priority_less, NULL);
     
-  #ifdef DEBUG
+    //HIGH donates to MED for lock b
+    //MED already donates to LOW for lock a
+    
+    //LOW has donors: MED
+    //thread_get_priority for LOW 
+    //retreives MED->priority
+    //creating a get_effective_priority(thread);
+    //should be sufficient to fix this problem
+    
+    //BUT
+    //any donator list that this is a part of will 
+    //need to be resorted. from here, there is no 
+    //list of who we have donated to.. (UNIMPLEMENTED)
+    
+  //#define DONATORS_DEBUG
+  
+  #ifdef DONATORS_DEBUG
     int j = 0;
+    
+    //list_sort (l, &thread_priority_less, NULL);
+    
     printf ("donators [%d]\n", list_size (l));
     for (e = list_begin (l); e != list_end (l); e = list_next (e))
     {
@@ -243,7 +262,10 @@ lock_acquire (struct lock *lock)
     
     //sema_down adds the current thread to the semaphore's waiting list 
     //the list is sorted by thread_priority_less
+    //struct thread *t = thread_current ();
+    //printf ("thread %s sema down\n", t->name);   
     sema_down (&lock->semaphore);
+    //printf ("thread %s sema up\n", t->name);
     
     //The current thread is now set to aquire this lock.
     //At this point it is expected that there might be
@@ -271,7 +293,7 @@ lock_acquire (struct lock *lock)
       else 
       { //put into donor's list
         list_insert_ordered (&t->donators, &t->donor_elem,
-                             &thread_priority_less, NULL);
+                             &donate_priority_less, NULL);
         e = list_next (e);
       }
     }
@@ -477,14 +499,14 @@ sema_priority_less (const struct list_elem *a,
    * order, or if I can figure out how to grab list_max in these situations
    * quick and dirty method for now - it works.
    */
-
+   
   list_sort (&s1->semaphore.waiters, &thread_priority_less, NULL);
   list_sort (&s2->semaphore.waiters, &thread_priority_less, NULL);
-
+  
   struct thread *t1 = list_entry (list_front (&s1->semaphore.waiters),
                                   struct thread, elem);
   struct thread *t2 = list_entry (list_front (&s2->semaphore.waiters),
                                   struct thread, elem);
-
+  
   return (t1->priority > t2->priority);
 }

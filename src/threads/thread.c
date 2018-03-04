@@ -171,18 +171,18 @@ thread_create (const char *name, int priority,
   struct switch_entry_frame *ef;
   struct switch_threads_frame *sf;
   tid_t tid;
-
+  
   ASSERT (function != NULL);
-
+  
   /* Allocate thread. */
   t = palloc_get_page (PAL_ZERO);
   if (t == NULL)
     return TID_ERROR;
-
+  
   /* Initialize thread. */
   init_thread (t, name, priority, thread_current ()->niceness);
   tid = t->tid = allocate_tid ();
-
+  
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
   kf->eip = NULL;
@@ -192,17 +192,20 @@ thread_create (const char *name, int priority,
   /* Stack frame for switch_entry(). */
   ef = alloc_frame (t, sizeof *ef);
   ef->eip = (void (*) (void)) kernel_thread;
-
+  
   /* Stack frame for switch_threads(). */
   sf = alloc_frame (t, sizeof *sf);
   sf->eip = switch_entry;
   sf->ebp = 0;
-
+  
   /* Add to run queue. */
   thread_unblock (t);
   
-  if (priority > thread_current()->priority)
-    thread_yield();
+  struct thread *tc = thread_current ();
+  
+  if (priority > thread_get_priority ()) {
+    thread_yield ();
+  }
   
   return tid;
 }
@@ -233,13 +236,11 @@ thread_block (void)
    update other data. */
 void
 thread_unblock (struct thread *t)
-{
-  enum intr_level old_level;
-
+{  
   ASSERT (is_thread (t));
-
-  old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
+  
+  enum intr_level old_level = intr_disable ();
   
   list_insert_ordered (&ready_list, &t->elem, thread_priority_less, NULL);
   t->status = THREAD_READY;
@@ -309,9 +310,9 @@ thread_yield (void)
 {
   struct thread *cur = thread_current ();
   enum intr_level old_level;
-
+  
   ASSERT (!intr_context ());
-
+  
   old_level = intr_disable ();
   
   if (cur != idle_thread)
@@ -329,9 +330,9 @@ void
 thread_foreach (thread_action_func *func, void *aux)
 {
   struct list_elem *e;
-
+  
   ASSERT (intr_get_level () == INTR_OFF);
-
+  
   for (e = list_begin (&all_list); e != list_end (&all_list);
        e = list_next (e))
     {
@@ -345,36 +346,73 @@ void
 thread_set_priority (int new_priority)
 {
   int old_priority = thread_current ()->priority;
-  /*
-  int diff = old_priority - new_priority;
-  if (diff > 0)
-  {
-    thread_current ()->alms += diff;
-  } */
   thread_current ()->priority = new_priority;
   
   //TODO we should probably actually compare to highest_ready_priority?
+  
+  /*
+  struct list_elem *e = list_front(&ready_list);
+  struct thread *tr = list_entry(e, struct thread, elem);
+  struct thread *tc = thread_current ();
+  if (tc->priority < tr->priority);
+  {
+    //printf ("%s yielding to %s\n", tc->name, tr->name);
+    thread_yield ();
+  } */
+  
   if (new_priority < old_priority)
-    thread_yield();
+    thread_yield ();
+}
+
+int
+get_effective_priority (struct thread *t)
+{
+  if (!list_empty (&t->donators))
+  {
+    struct list_elem *e = list_front (&t->donators);
+    struct thread *th = list_entry (e, struct thread, donor_elem);
+    //get effective priority of higher thread
+    return get_effective_priority (th);
+  }
+  return t->priority;
 }
 
 /* Returns the current thread's priority. */
 int
 thread_get_priority (void)
 {
+  return get_effective_priority (thread_current ());
+  /*
   struct list *l = &thread_current ()->donators;
   if (!list_empty (l))
   {
     enum intr_level old_level = intr_disable ();
     //was front, but order was different from what I thought
     //it is sorted 32, 33, etc. and not 33, 32?
-    struct list_elem *e = list_back (l);
+    struct list_elem *e = list_front (l); //front and back..
     struct thread *t = list_entry (e, struct thread, donor_elem);
     intr_set_level (old_level);
     
     return t->priority;
   }
   return thread_current ()->priority;
+  //*/
+}
+
+bool
+donate_priority_less (const struct list_elem *a,
+                      const struct list_elem *b,
+                      void* aux UNUSED)
+{
+  //elem: ready and wait 
+  //donor_elem: donor element
+  struct thread *t1 = list_entry (a, struct thread, donor_elem);
+  struct thread *t2 = list_entry (b, struct thread, donor_elem);
+  
+  int priority1 = get_effective_priority (t1);
+  int priority2 = get_effective_priority (t2);
+  
+  return priority1 > priority2;
 }
 
 bool
@@ -382,9 +420,20 @@ thread_priority_less (const struct list_elem *a,
                       const struct list_elem *b,
                       void* aux UNUSED)
 {
+  //elem: ready and wait 
+  //donor_elem: donor element
   struct thread *t1 = list_entry (a, struct thread, elem);
   struct thread *t2 = list_entry (b, struct thread, elem);
-  return (t1->priority > t2->priority);
+  
+  struct list *l1 = &t1->donators;
+  struct list *l2 = &t2->donators;
+  
+  int priority1 = get_effective_priority (t1);
+  int priority2 = get_effective_priority (t2);
+  //int priority1 = t1->priority;
+  //int priority2 = t2->priority;
+  
+  return (priority1 > priority2);
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -549,15 +598,11 @@ is_thread (struct thread *t)
    NAME. */
 static void
 init_thread (struct thread *t, const char *name, int priority, int nice)
-{
-  //printf("initializing a thread\n");
-  
-  //enum intr_level old_level;
-  
+{  
   ASSERT (t != NULL);
   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
   ASSERT (name != NULL);
-
+  
   memset (t, 0, sizeof *t);
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
@@ -602,8 +647,6 @@ next_thread_to_run (void)
 int
 highest_ready_priority (void)
 {
-  //this interrupt disable causes the timer calibration to time out
-  //enum intr_level old_level = intr_disable ();
   if (list_empty (&ready_list)) {
     return 0;
   }
@@ -612,7 +655,6 @@ highest_ready_priority (void)
   //list_sort (&ready_list, &thread_priority_less, NULL);
   struct thread *t;
   t = list_entry (list_front (&ready_list), struct thread, elem);
-  //intr_set_level (old_level);
   return t->priority;
 }
 
