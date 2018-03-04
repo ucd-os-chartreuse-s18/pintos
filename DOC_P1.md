@@ -7,7 +7,7 @@
 
 ---- GROUP ----  
 Matthew Moltzau <matthew.moltzau@ucdenver.edu>  
-Michael Hedrick <email@domain.example>
+Michael Hedrick <michael.hedrick@ucdenver.edu>
 
 ## ALARM CLOCK
 
