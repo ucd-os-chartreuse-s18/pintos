@@ -368,29 +368,13 @@ thread_get_priority (void)
     enum intr_level old_level = intr_disable ();
     //was front, but order was different from what I thought
     //it is sorted 32, 33, etc. and not 33, 32?
-    //struct thread *t = list_entry (list_back (l), struct thread, donor_elem);
-    struct list_elem *e = list_back(l);
-    struct thread *t = list_entry(e, struct thread, donor_elem);
-    
-    /*
-    //DEBUG
-    enum intr_level old_level = intr_disable ();
-    struct list_elem *e;
-    int i = 0;
-    for (e = list_begin (l); e != list_end (l); e = list_next (e))
-    {
-      struct thread *t2 = list_entry (list_front (l), struct thread, donor_elem);
-      printf("%d %d\n", i, t2->priority);
-      i++;
-    }
-    //*/
+    struct list_elem *e = list_back (l);
+    struct thread *t = list_entry (e, struct thread, donor_elem);
     intr_set_level (old_level);
     
-    //return thread_current ()->priority;
     return t->priority;
   }
   return thread_current ()->priority;
-  //return thread_current ()->priority + thread_current ()->alms;
 }
 
 bool
@@ -580,7 +564,6 @@ init_thread (struct thread *t, const char *name, int priority, int nice)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->recent_cpu.val = 0;
-  t->alms = 0;
   t->magic = THREAD_MAGIC;
   t->niceness = nice;
   list_init (&t->donators);

@@ -90,7 +90,6 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     int niceness;                       /* Thread's nice value, for MLFQS */
-    int alms;                           /* Alms! Alms for the poor! (donation) */
     fixed_point recent_cpu;             /* keep track of the current thread's CPU time */
     int64_t thread_wake_tick;           /* The tick the thread should wake up on */
     
@@ -98,7 +97,6 @@ struct thread
     struct list_elem allelem;           /* all_list */
     struct list_elem elem;              /* ready_list, sema->waiters */
     struct list_elem donor_elem;        /* donators */
-    struct list_elem lock_waiter_elem;  /* lock->waiters */
     struct list_elem waiting_elem;      /* For use in timer_sleep */
     
     /* For multiple donate */
