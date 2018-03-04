@@ -110,7 +110,7 @@ thread_start (void)
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
   thread_create ("idle", PRI_DEFAULT, idle, &idle_started);
-
+  load_avg.val = 0;
   /* Start preemptive thread scheduling. */
   intr_enable ();
 
@@ -406,29 +406,22 @@ void
 thread_set_nice (int nice)
 {
   //I think I might need to disable interrupts in case interleaving occurs here
-  
+  enum intr_level old_level = intr_disable ();
   // set the niceness
   thread_current ()->niceness = nice;
   
-  // calculate the thread's new priority based on niceness
-  // **** This may not work as currently implemented, need to figure out
-  //  **** fixed pt implications
-  enum intr_level old_level = intr_disable ();
-  int nice_priority = PRI_MAX - fix_to_int_round(thread_current ()->recent_cpu) / 4 - (nice * 2);
-  thread_current ()->priority = nice_priority;
-  
-  // thread should yield if new priority is not the highest priority
+  thread_recalc_priority (thread_current (), &nice);
+
   if (!list_empty (&ready_list))
   {
     struct list_elem *temp_elem = list_max (&ready_list, &thread_priority_less, NULL);
-    struct thread *t = list_entry (temp_elem, struct thread, elem);
+    struct thread *tmp_t = list_entry (temp_elem, struct thread, elem);
 
-    if (thread_current ()->priority < t->priority)
+    if (thread_current ()->priority < tmp_t->priority)
     {
       thread_yield ();
     }
   }
-
   intr_set_level (old_level);
 }
 
@@ -443,7 +436,8 @@ thread_get_nice (void)
 int
 thread_get_load_avg (void)
 {
-  fixed_point fix_load = mul_fix_int (thread_current ()->recent_cpu, 100);
+  struct thread *t = thread_current ();
+  fixed_point fix_load = mul_fix_int (t->recent_cpu, 100);
   int int_load = fix_to_int_round (fix_load);
   return int_load;
 }
@@ -465,7 +459,6 @@ thread_recalc_recent_cpu (struct thread *t, void *aux UNUSED)
 {
   enum intr_level old_level = intr_disable ();
 
-  //could simplify this lol
   fixed_point left_op = div_fix_fix(mul_fix_int (load_avg, 2), 
     add_fix_int (mul_fix_int (load_avg, 2), 1));
 
@@ -476,6 +469,19 @@ thread_recalc_recent_cpu (struct thread *t, void *aux UNUSED)
   intr_set_level (old_level);
 }
 
+void 
+thread_recalc_priority (struct thread *t, void *aux)
+{
+  enum intr_level old_level = intr_disable();
+
+  int nice = (int)&aux;
+  int nice_priority = PRI_MAX - fix_to_int_round(thread_current ()->recent_cpu) / 4 - (nice * 2);
+  t->priority = nice_priority;
+  
+  // thread should yield if new priority is not the highest priority
+
+  intr_set_level (old_level);
+}
 /* Student created function to recalculate the system wide load average */
 void
 recalc_load_avg (void)
@@ -484,7 +490,7 @@ recalc_load_avg (void)
 
 
   load_avg = add_fix_fix (div_fix_int(mul_fix_int (load_avg, 59), 60),
-    div_fix_int (int_to_fix ((int)list_size(&ready_list)), 60));
+    div_fix_int (int_to_fix (list_size(&ready_list)), 60));
 
   intr_set_level (old_level);
 }
@@ -577,6 +583,7 @@ init_thread (struct thread *t, const char *name, int priority, int nice)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  t->recent_cpu.val = 0;
   t->alms = 0;
   t->magic = THREAD_MAGIC;
   t->niceness = nice;

@@ -212,12 +212,16 @@ timer_interrupt (struct intr_frame *args UNUSED)
 
   if (thread_mlfqs)
   {
-
-    ++thread_current ()->recent_cpu.val;
+    ++(thread_current ()->recent_cpu.val);
     if (ticks % TIMER_FREQ == 0)
     {
-      thread_foreach(thread_recalc_recent_cpu, NULL);
+      thread_foreach(&thread_recalc_recent_cpu, NULL);
       recalc_load_avg (); 
+    }
+
+    if (ticks % 4 == 0)
+    {
+      thread_foreach(&thread_recalc_priority, NULL); 
     }
   }
   
