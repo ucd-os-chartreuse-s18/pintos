@@ -448,6 +448,7 @@ thread_get_recent_cpu (void)
 {
   fixed_point fix_cpu = mul_fix_int (thread_current ()->recent_cpu, 100);
   int int_cpu = fix_to_int_round (fix_cpu);
+  printf("returning ", int_cpu);
   return int_cpu;
 }
 
@@ -465,7 +466,7 @@ thread_recalc_recent_cpu (struct thread *t, void *aux UNUSED)
   left_op = mul_fix_fix (left_op, t->recent_cpu);
 
   t->recent_cpu = add_fix_int (left_op, t->niceness);
-
+  printf("rcpu =", t->recent_cpu.val);
   intr_set_level (old_level);
 }
 
@@ -492,6 +493,7 @@ recalc_load_avg (void)
   load_avg = add_fix_fix (div_fix_int(mul_fix_int (load_avg, 59), 60),
     div_fix_int (int_to_fix (list_size(&ready_list)), 60));
 
+  printf("wtfwtfwtf", load_avg);
   intr_set_level (old_level);
 }
 
