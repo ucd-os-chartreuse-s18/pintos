@@ -362,13 +362,14 @@ thread_set_priority (int new_priority)
 int
 thread_get_priority (void)
 {
-  //enum intr_level old_level = intr_disable ();
   struct list *l = &thread_current ()->donators;
   if (!list_empty (l))
   {
     //was front, but order was different from what I thought
     //it is sorted 32, 33, etc. and not 33, 32?
-    struct thread *t = list_entry (list_back (l), struct thread, donor_elem);
+    //struct thread *t = list_entry (list_back (l), struct thread, donor_elem);
+    struct list_elem *e = list_back(l);
+    struct thread *t = list_entry(e, struct thread, donor_elem);
     
     /*
     //DEBUG
@@ -381,12 +382,11 @@ thread_get_priority (void)
       printf("%d %d\n", i, t2->priority);
       i++;
     }
-    intr_set_level (old_level);
     //*/
-    //intr_set_level (old_level);
+    
+    //return thread_current ()->priority;
     return t->priority;
-  } //else
-  //intr_set_level (old_level);
+  }
   return thread_current ()->priority;
   //return thread_current ()->priority + thread_current ()->alms;
 }
