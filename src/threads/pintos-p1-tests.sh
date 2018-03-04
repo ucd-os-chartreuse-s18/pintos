@@ -48,9 +48,9 @@ main () {
         mlfqs-recent-1
         #mlfqs-fair-2
         #mlfqs-fair-20
-        mlfqs-nice-2
+        #mlfqs-nice-2
         #mlfqs-nice-10
-        mlfqs-block
+        #mlfqs-block
         
         echo -e "\nScript execution terminated successfully."
     else 

@@ -207,12 +207,14 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
+  struct thread *t = thread_current ();
   ticks++;
   thread_tick ();
 
   if (thread_mlfqs)
   {
-    ++(thread_current ()->recent_cpu.val);
+    add_fix_int (t->recent_cpu, 1);
+
     if (ticks % TIMER_FREQ == 0)
     {
       thread_foreach(&thread_recalc_recent_cpu, NULL);

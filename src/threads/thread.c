@@ -406,7 +406,7 @@ void
 thread_set_nice (int nice)
 {
   //I think I might need to disable interrupts in case interleaving occurs here
-  enum intr_level old_level = intr_disable ();
+  //enum intr_level old_level = intr_disable ();
   // set the niceness
   thread_current ()->niceness = nice;
   
@@ -422,7 +422,7 @@ thread_set_nice (int nice)
       thread_yield ();
     }
   }
-  intr_set_level (old_level);
+  //intr_set_level (old_level);
 }
 
 /* Returns the current thread's nice value. */
@@ -436,20 +436,14 @@ thread_get_nice (void)
 int
 thread_get_load_avg (void)
 {
-  struct thread *t = thread_current ();
-  fixed_point fix_load = mul_fix_int (t->recent_cpu, 100);
-  int int_load = fix_to_int_round (fix_load);
-  return int_load;
+  return fix_to_int_round (mul_fix_int (load_avg, 100));
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void)
 {
-  fixed_point fix_cpu = mul_fix_int (thread_current ()->recent_cpu, 100);
-  int int_cpu = fix_to_int_round (fix_cpu);
-  printf("returning ", int_cpu);
-  return int_cpu;
+  return fix_to_int_round (mul_fix_int (thread_current ()->recent_cpu, 100));
 }
 
 /* Student created thread, recalculates a thread's recent cpu
@@ -466,17 +460,15 @@ thread_recalc_recent_cpu (struct thread *t, void *aux UNUSED)
   left_op = mul_fix_fix (left_op, t->recent_cpu);
 
   t->recent_cpu = add_fix_int (left_op, t->niceness);
-  printf("rcpu =", t->recent_cpu.val);
   intr_set_level (old_level);
 }
 
 void 
-thread_recalc_priority (struct thread *t, void *aux)
+thread_recalc_priority (struct thread *t, void *aux UNUSED)
 {
   enum intr_level old_level = intr_disable();
-
-  int nice = (int)&aux;
-  int nice_priority = PRI_MAX - fix_to_int_round(thread_current ()->recent_cpu) / 4 - (nice * 2);
+  int nice_priority = fix_to_int_floor (sub_fix_fix (int_to_fix(PRI_MAX), 
+    sub_fix_int (div_fix_int (t->recent_cpu, 4), t->niceness * 2)));
   t->priority = nice_priority;
   
   // thread should yield if new priority is not the highest priority
@@ -493,7 +485,7 @@ recalc_load_avg (void)
   load_avg = add_fix_fix (div_fix_int(mul_fix_int (load_avg, 59), 60),
     div_fix_int (int_to_fix (list_size(&ready_list)), 60));
 
-  printf("wtfwtfwtf", load_avg);
+  //printf(load_avg.val);
   intr_set_level (old_level);
 }
 

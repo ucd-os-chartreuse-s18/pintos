@@ -107,6 +107,7 @@ sub_fix_fix (const fixed_point x, fixed_point y)
     return fxp;
 }
 
+
 // sub an integer from a fixed point
 static inline fixed_point 
 sub_fix_int (const fixed_point x, int n) 
