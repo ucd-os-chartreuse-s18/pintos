@@ -26,12 +26,6 @@
    MODIFICATIONS.
 */
 
-#define DONATE_CHANGES
-//#define ADD_TO_DONATORS
-//#define ADD_TO_WAITERS
-//#define PAST_SEMA_DOWN
-//#define REMOVING_WAITERS
-
 #include "threads/synch.h"
 #include <stdio.h>
 #include <string.h>
@@ -220,81 +214,67 @@ lock_acquire (struct lock *lock)
   //which will actually wait until success.
   if (!sema_try_down(&lock->semaphore))
   {
-    //ASSERT (intr_get_level () == INTR_OFF); //fails
     enum intr_level old_level = intr_disable ();
     
     //Add to donator's list belonging to thread
     //Sorted by priority so that we can select the highest
-  #if defined(DONATE_CHANGES) && defined(ADD_TO_DONATORS)
     struct list *l = &lock->holder->donators;
     struct list_elem *e = &thread_current ()->donor_elem;
     list_insert_ordered (l, e, thread_priority_less, NULL);
-  #endif
-  
-    /*
-    //DEBUG print priorities in their order
+    
+  #ifdef DEBUG
     int j = 0;
-    //list_sort (l, thread_priority_less, NULL);
+    printf ("donators [%d]\n", list_size (l));
     for (e = list_begin (l); e != list_end (l); e = list_next (e))
     {
       struct thread *t = list_entry (e, struct thread, donor_elem);
-      printf ("%d %d\n", j, t->priority);
+      printf ("%d %d [%s to %s]\n", j, t->priority, t->name, lock->holder->name);
       j++;
-    } //*/
-  
-  #if defined(DONATE_CHANGES) && defined(ADD_TO_WAITERS)
-    
-    #ifndef ADD_TO_DONATORS
-      struct list *l;
-      struct list_elem *e;
-    #endif
-    
-    //Add to lock's waiting list (order by time added,
-    //though maybe change to priority, or just don't
-    //assume the order?)
+    }
     l = &lock->semaphore.waiters;
-    e = &thread_current ()->lock_waiter_elem; //was elem
-    list_push_back(l, e);
+    int k = 0;
+    printf ("lock waiters1 [%d]\n", list_size (l));
+    for (e = list_begin (l); e != list_end (l); e = list_next (e))
+    {
+      struct thread *t = list_entry (e, struct thread, elem);
+      printf ("%d %d %s\n", k, t->priority, t->name);
+    }
   #endif
-  
-    //*
-    //printf("sd1\n");
+    
+    //sema_down adds the current thread to the semaphore's waiting list 
+    //the list is sorted by thread_priority_less
     sema_down (&lock->semaphore);
-    //printf("sd2\n");
-    //*/
     
     //The current thread is now set to aquire this lock.
     //At this point it is expected that there might be
     //waiters on the lock to add to the current thread's
     //donators list.
     
-  #if defined(DONATE_CHANGES) && defined(PAST_SEMA_DOWN)
-  
-    #if defined(ADD_TO_DONATORS) || defined(ADD_TO_WAITERS)
-      //already defined
-    #else
-      struct list *l = &lock->semaphore.waiters;
-      struct list_elem *e = &thread_current ()->lock_waiter_elem; //was elem
-    #endif
-  
-    int i = 0;
+  #ifdef PRINT_LISTS_DEBUG
+    printf ("lock waiters3 [%d]\n", list_size (l));
+    k = 0;
     for (e = list_begin (l); e != list_end (l); e = list_next (e))
     {
-      //printf("t %d\n", i);
-      i++;
+      struct thread *t = list_entry (e, struct thread, elem);
+      printf ("%d %d %s\n", k, t->priority, t->name);
+    }
+  #endif
+  
+    l = &lock->semaphore.waiters;
+    for (e = list_begin (l); e != list_end (l);)
+    {
       struct thread *t = list_entry (e, struct thread, elem);
       if (t == thread_current ())
-      {
-        //remove e from l (no longer waiting)
-        list_remove (e); //commenting this out creates a timeout
+      { //remove e from l (no longer waiting)
+        e = list_remove (e);
       }
-      else //put into donor's list
-      {
+      else 
+      { //put into donor's list
         list_insert_ordered (&t->donators, &t->donor_elem,
                              &thread_priority_less, NULL);
+        e = list_next (e);
       }
-    } //*/
-  #endif
+    }
     
     intr_set_level (old_level);
   }
@@ -340,33 +320,38 @@ lock_release (struct lock *lock)
   //handled on the fly.
   //Be mindful of the next running thread, whatever that is.
   
-  enum intr_level old_level = intr_disable ();
-  
-#if defined(DONATE_CHANGES) && defined(REMOVING_WAITERS)
-
+  enum intr_level old_level = intr_disable ();  
   struct list_elem *e;
   struct list *l = &lock->semaphore.waiters;
   
-  for (e = list_begin (l); e != list_end (l); e = list_next (e))
+  if (!list_empty (l))
   {
-    struct thread *t = list_entry (e, struct thread, elem);
-        
-    //even though &t->donor_elem is in the list, it fails the interior_elem assertion.
-    list_remove (&t->donor_elem);
+  #ifdef PRINT_LISTS_DEBUG
+    printf ("waiters [%d]\n", list_size (&lock->semaphore.waiters));  
+    for (e = list_begin (l); e != list_end (l); e = list_next (e))
+    {
+        struct thread *t = list_entry (e, struct thread, elem);
+        printf ("%s %d\n", t->name, t->priority);
+    }
+  #endif
+    
+    for (e = list_begin (l); e != list_end (l); e = list_next (e))
+    {
+      struct thread *t = list_entry (e, struct thread, elem);
+      //e is in the list of waiters (per lock),
+      //t->donor elem is in the list of donators (per thread)
+      list_remove (&t->donor_elem);
+    }
   }
-#endif
   
-  //lock->holder->donators;
   lock->holder = NULL;
   sema_up (&lock->semaphore);
   
   intr_set_level (old_level);
-  
-  //sema_up (&lock->semaphore);
-  
+    
   /* If a thread no longer has the highest effective priority
-  * (e.g. because it released a lock), it must immediately
-  * yield the CPU */
+   * (e.g. because it released a lock), it must immediately
+   * yield the CPU */
   int p = highest_ready_priority ();
   if (thread_get_priority () < p)
   {
