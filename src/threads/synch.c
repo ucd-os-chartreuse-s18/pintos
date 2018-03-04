@@ -222,65 +222,14 @@ lock_acquire (struct lock *lock)
         
     list_insert_ordered (l, e, donate_priority_less, NULL);
     
-    //HIGH donates to MED for lock b
-    //MED already donates to LOW for lock a
-    
-    //LOW has donors: MED
-    //thread_get_priority for LOW 
-    //retreives MED->priority
-    //creating a get_effective_priority(thread);
-    //should be sufficient to fix this problem
-    
-    //BUT
-    //any donator list that this is a part of will 
-    //need to be resorted. from here, there is no 
-    //list of who we have donated to.. (UNIMPLEMENTED)
-    
-  //#define DONATORS_DEBUG
-  
-  #ifdef DONATORS_DEBUG
-    int j = 0;
-    
-    //list_sort (l, &thread_priority_less, NULL);
-    
-    printf ("donators [%d]\n", list_size (l));
-    for (e = list_begin (l); e != list_end (l); e = list_next (e))
-    {
-      struct thread *t = list_entry (e, struct thread, donor_elem);
-      printf ("%d %d [%s to %s]\n", j, t->priority, t->name, lock->holder->name);
-      j++;
-    }
-    l = &lock->semaphore.waiters;
-    int k = 0;
-    printf ("lock waiters1 [%d]\n", list_size (l));
-    for (e = list_begin (l); e != list_end (l); e = list_next (e))
-    {
-      struct thread *t = list_entry (e, struct thread, elem);
-      printf ("%d %d %s\n", k, t->priority, t->name);
-    }
-  #endif
-    
     //sema_down adds the current thread to the semaphore's waiting list 
-    //the list is sorted by thread_priority_less
-    //struct thread *t = thread_current ();
-    //printf ("thread %s sema down\n", t->name);   
+    //the list is sorted by thread_priority_less  
     sema_down (&lock->semaphore);
-    //printf ("thread %s sema up\n", t->name);
     
     //The current thread is now set to aquire this lock.
     //At this point it is expected that there might be
     //waiters on the lock to add to the current thread's
     //donators list.
-    
-  #ifdef PRINT_LISTS_DEBUG
-    printf ("lock waiters3 [%d]\n", list_size (l));
-    k = 0;
-    for (e = list_begin (l); e != list_end (l); e = list_next (e))
-    {
-      struct thread *t = list_entry (e, struct thread, elem);
-      printf ("%d %d %s\n", k, t->priority, t->name);
-    }
-  #endif
   
     l = &lock->semaphore.waiters;
     for (e = list_begin (l); e != list_end (l);)
@@ -348,15 +297,6 @@ lock_release (struct lock *lock)
   
   if (!list_empty (l))
   {
-  #ifdef PRINT_LISTS_DEBUG
-    printf ("waiters [%d]\n", list_size (&lock->semaphore.waiters));  
-    for (e = list_begin (l); e != list_end (l); e = list_next (e))
-    {
-        struct thread *t = list_entry (e, struct thread, elem);
-        printf ("%s %d\n", t->name, t->priority);
-    }
-  #endif
-    
     for (e = list_begin (l); e != list_end (l); e = list_next (e))
     {
       struct thread *t = list_entry (e, struct thread, elem);
