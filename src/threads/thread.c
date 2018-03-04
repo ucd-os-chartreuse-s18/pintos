@@ -54,7 +54,8 @@ static long long user_ticks;    /* # of timer ticks in user programs. */
 /* Scheduling. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
 static unsigned thread_ticks;   /* # of timer ticks since last yield. */
-fixed_point load_avg;
+static fixed_point load_avg;           /* Average ready_listed threads per 1000 ticks */
+
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
@@ -65,7 +66,7 @@ static void kernel_thread (thread_func *, void *aux);
 static void idle (void *aux UNUSED);
 static struct thread *running_thread (void);
 static struct thread *next_thread_to_run (void);
-static void init_thread (struct thread *, const char *name, int priority, int nice);
+static void init_thread (struct thread *, const char *name, int priority);
 static bool is_thread (struct thread *) UNUSED;
 static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
@@ -88,19 +89,23 @@ static tid_t allocate_tid (void);
 void
 thread_init (void)
 {
-  ASSERT (intr_get_level () == INTR_OFF);
+  //initialize load average of the system
+  load_avg.val = 0;
 
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
 
+  
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
-  init_thread (initial_thread, "main", PRI_DEFAULT, 0);
+  initial_thread->niceness = NICE_DEFAULT; //first thread is niceness 0
+  initial_thread->recent_cpu.val = 0;
+
+  init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
 }
-
 /* Starts preemptive thread scheduling by enabling interrupts.
    Also creates the idle thread. */
 void
@@ -110,7 +115,6 @@ thread_start (void)
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
   thread_create ("idle", PRI_DEFAULT, idle, &idle_started);
-  load_avg.val = 0;
   /* Start preemptive thread scheduling. */
   intr_enable ();
 
@@ -166,6 +170,7 @@ tid_t
 thread_create (const char *name, int priority,
                thread_func *function, void *aux)
 {
+  enum intr_level old_level = intr_disable();
   struct thread *t;
   struct kernel_thread_frame *kf;
   struct switch_entry_frame *ef;
@@ -180,9 +185,14 @@ thread_create (const char *name, int priority,
     return TID_ERROR;
 
   /* Initialize thread. */
-  init_thread (t, name, priority, thread_current ()->niceness);
+  init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
-
+  /* MLFQS Advanced Scheduler implementation */
+  if (thread_mlfqs)
+  {
+    t->niceness = thread_current ()->niceness;
+    t->recent_cpu.val = thread_current ()->recent_cpu.val;
+  }
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
   kf->eip = NULL;
@@ -197,10 +207,10 @@ thread_create (const char *name, int priority,
   sf = alloc_frame (t, sizeof *sf);
   sf->eip = switch_entry;
   sf->ebp = 0;
-
+  
   /* Add to run queue. */
   thread_unblock (t);
-  
+  intr_set_level (old_level);
   if (priority > thread_current()->priority)
     thread_yield();
   
@@ -241,7 +251,14 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
   
-  list_insert_ordered (&ready_list, &t->elem, thread_priority_less, NULL);
+  if (thread_mlfqs)
+  {
+    list_push_back (&ready_list, &t->elem);
+  }
+  else
+  {
+    list_insert_ordered (&ready_list, &t->elem, thread_priority_less, NULL);
+  }
   t->status = THREAD_READY;
   
   intr_set_level (old_level);
@@ -307,18 +324,25 @@ thread_exit (void)
 void
 thread_yield (void)
 {
-  struct thread *cur = thread_current ();
+  struct thread *t = thread_current ();
   enum intr_level old_level;
 
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
   
-  if (cur != idle_thread)
+  if (t != idle_thread)
   {
-    list_insert_ordered (&ready_list, &cur->elem, thread_priority_less, NULL);
+    if (thread_mlfqs)
+    {
+      list_push_back (&ready_list, &t->elem);
+    }
+    else
+    {
+    list_insert_ordered (&ready_list, &t->elem, thread_priority_less, NULL);
+    }
   }
-  cur->status = THREAD_READY;
+  t->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
 }
@@ -410,7 +434,7 @@ thread_set_nice (int nice)
   // set the niceness
   thread_current ()->niceness = nice;
   
-  thread_recalc_priority (thread_current (), &nice);
+  /*thread_recalc_priority (thread_current (), &nice);
 
   if (!list_empty (&ready_list))
   {
@@ -422,8 +446,11 @@ thread_set_nice (int nice)
       thread_yield ();
     }
   }
+
   //intr_set_level (old_level);
+  */
 }
+
 
 /* Returns the current thread's nice value. */
 int
@@ -452,41 +479,52 @@ thread_get_recent_cpu (void)
 void
 thread_recalc_recent_cpu (struct thread *t, void *aux UNUSED)
 {
-  enum intr_level old_level = intr_disable ();
+  //enum intr_level old_level = intr_disable ();
+  ASSERT (intr_get_level () == INTR_OFF)
 
-  fixed_point left_op = div_fix_fix(mul_fix_int (load_avg, 2), 
-    add_fix_int (mul_fix_int (load_avg, 2), 1));
+  // recent_cpu = (2*load_avg)/(2*load_avg + 1) * recent_cpu + nice
+  // broke down the algebra step by step to trace my problems
+  fixed_point op1 = mul_fix_int (load_avg, 2);
+  fixed_point op2 = add_fix_int (op1, 1);
+  fixed_point op3 = div_fix_fix (op1, op2);
+  fixed_point op4 = mul_fix_fix (op3, t->recent_cpu);
+  fixed_point result = add_fix_int (op4, t->niceness);
 
-  left_op = mul_fix_fix (left_op, t->recent_cpu);
-
-  t->recent_cpu = add_fix_int (left_op, t->niceness);
-  intr_set_level (old_level);
+  t->recent_cpu = result;
+  //intr_set_level (old_level);
 }
 
 void 
 thread_recalc_priority (struct thread *t, void *aux UNUSED)
 {
-  enum intr_level old_level = intr_disable();
-  int nice_priority = fix_to_int_floor (sub_fix_fix (int_to_fix(PRI_MAX), 
-    sub_fix_int (div_fix_int (t->recent_cpu, 4), t->niceness * 2)));
+  int nice_priority;
+
+  // priority = PRI_MAX - (recent_cpu / 4) - (nice * 2)
+  // broke this up to isolate algebra errors
+
+  fixed_point op1 = div_fix_int (t->recent_cpu, 4);
+  fixed_point op2 = sub_int_fix (op1, PRI_MAX);
+  fixed_point op3 = sub_fix_int (op2, (t->niceness*2));
+
+  nice_priority = fix_to_int_floor (op3);
+
   t->priority = nice_priority;
   
   // thread should yield if new priority is not the highest priority
-
-  intr_set_level (old_level);
 }
 /* Student created function to recalculate the system wide load average */
 void
 recalc_load_avg (void)
 {
-  enum intr_level old_level = intr_disable();
+  ASSERT (intr_get_level () == INTR_OFF)
 
+  // load_avg = (59/60)*load_avg + (1/60)*ready_threads
 
-  load_avg = add_fix_fix (div_fix_int(mul_fix_int (load_avg, 59), 60),
-    div_fix_int (int_to_fix (list_size(&ready_list)), 60));
+  // broke this up to isolate problems with fixedpt algebra
 
-  //printf(load_avg.val);
-  intr_set_level (old_level);
+  fixed_point op1 = div_fix_int (mul_fix_int (load_avg, 59),60);
+  fixed_point op2 = div_fix_int (int_to_fix (list_size(&ready_list)),60);
+  load_avg = add_fix_fix (op1, op2);
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -562,7 +600,7 @@ is_thread (struct thread *t)
 /* Does basic initialization of T as a blocked thread named
    NAME. */
 static void
-init_thread (struct thread *t, const char *name, int priority, int nice)
+init_thread (struct thread *t, const char *name, int priority)
 {
   //printf("initializing a thread\n");
   
@@ -580,7 +618,7 @@ init_thread (struct thread *t, const char *name, int priority, int nice)
   t->recent_cpu.val = 0;
   t->alms = 0;
   t->magic = THREAD_MAGIC;
-  t->niceness = nice;
+  //t->niceness = thread_current()->niceness;
   list_init (&t->donators);
   sema_init (&t->thread_sema, 0);
   list_push_back (&all_list, &t->allelem);

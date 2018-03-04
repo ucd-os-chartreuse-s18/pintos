@@ -37,9 +37,9 @@ static inline int
 fix_to_int_round (const fixed_point x) 
 {
     if (x.val >= 0)
-      return ((x.val + F / 2) / F);
+      return ((x.val + (F / 2)) / F);
     else
-      return ((x.val - F / 2) / F);
+      return ((x.val - (F / 2)) / F);
 }
 
 //Not sure to what degree this is valid
@@ -107,7 +107,14 @@ sub_fix_fix (const fixed_point x, fixed_point y)
     return fxp;
 }
 
-
+// sub a fixed from an int
+static inline fixed_point
+sub_int_fix (const fixed_point x, int n)
+{
+    fixed_point fxp;
+    fxp.val = n * F - x.val;
+    return fxp;
+}
 // sub an integer from a fixed point
 static inline fixed_point 
 sub_fix_int (const fixed_point x, int n) 

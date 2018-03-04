@@ -211,10 +211,13 @@ timer_interrupt (struct intr_frame *args UNUSED)
   ticks++;
   thread_tick ();
 
+
+  /* MLFQS Advanced Schedule implementation */
   if (thread_mlfqs)
   {
-    add_fix_int (t->recent_cpu, 1);
 
+    add_fix_int (t->recent_cpu, 1);
+    
     if (ticks % TIMER_FREQ == 0)
     {
       thread_foreach(&thread_recalc_recent_cpu, NULL);
