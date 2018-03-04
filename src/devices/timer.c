@@ -210,13 +210,26 @@ timer_interrupt (struct intr_frame *args UNUSED)
   ticks++;
   thread_tick ();
 
+  if (thread_mlfqs)
+  {
+
+    ++thread_current ()->recent_cpu.val;
+    if (ticks % TIMER_FREQ == 0)
+    {
+      thread_foreach(thread_recalc_recent_cpu, NULL);
+      recalc_load_avg (); 
+    }
+  }
+  
+
+  // calculate the current thread's recent_cpu if a second has gone by
+
   /* To wake a sleeping thread using the timer interrupt
    * we need to check the elements of the waiting thread list
    * to see if the current ticks are equal to the tick at which
    * the thread should wake up.  If the tick is correct, we
    * unblock the waiting thread by upping the thread's semaphore
    * and taking it off the waiting threads list.
-   * ?thread needs to be added to the ready list?
    */
 
   //create a list_elem to use for iterating through the list

@@ -26,8 +26,8 @@
    MODIFICATIONS.
 */
 
-#define DONATE_CHANGES
-#define ADD_TO_DONATORS
+//#define DONATE_CHANGES
+//#define ADD_TO_DONATORS
 //#define ADD_TO_WAITERS
 //#define PAST_SEMA_DOWN
 //#define REMOVING_WAITERS
