@@ -100,7 +100,7 @@ add_fix_int (const fixed_point x, int n)
 
 // subtracted fix pt values
 static inline fixed_point 
-ub_fix_fix (const fixed_point x, fixed_point y)
+sub_fix_fix (const fixed_point x, fixed_point y)
 {
     fixed_point fxp;
     fxp.val = x.val + y.val;

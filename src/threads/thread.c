@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/fixed-point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -53,7 +54,7 @@ static long long user_ticks;    /* # of timer ticks in user programs. */
 /* Scheduling. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
 static unsigned thread_ticks;   /* # of timer ticks since last yield. */
-
+fixed_point load_avg;
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
@@ -64,7 +65,7 @@ static void kernel_thread (thread_func *, void *aux);
 static void idle (void *aux UNUSED);
 static struct thread *running_thread (void);
 static struct thread *next_thread_to_run (void);
-static void init_thread (struct thread *, const char *name, int priority);
+static void init_thread (struct thread *, const char *name, int priority, int nice);
 static bool is_thread (struct thread *) UNUSED;
 static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
@@ -95,7 +96,7 @@ thread_init (void)
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
-  init_thread (initial_thread, "main", PRI_DEFAULT);
+  init_thread (initial_thread, "main", PRI_DEFAULT, 0);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
 }
@@ -133,7 +134,6 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
-  
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
@@ -180,7 +180,7 @@ thread_create (const char *name, int priority,
     return TID_ERROR;
 
   /* Initialize thread. */
-  init_thread (t, name, priority);
+  init_thread (t, name, priority, thread_current ()->niceness);
   tid = t->tid = allocate_tid ();
 
   /* Stack frame for kernel_thread(). */
@@ -405,53 +405,88 @@ thread_priority_less (const struct list_elem *a,
 void
 thread_set_nice (int nice)
 {
+  //I think I might need to disable interrupts in case interleaving occurs here
+  
   // set the niceness
   thread_current ()->niceness = nice;
   
   // calculate the thread's new priority based on niceness
   // **** This may not work as currently implemented, need to figure out
   //  **** fixed pt implications
-  
-  //not sure if you got this compiling, but I am currently getting the 
-  //error: invalid operands to binary (recent_cpu / 4 is undefined)
-  //thread_current ()->priority = PRI_MAX - (fix_to_int_floor (thread_current ()->recent_cpu / 4) - (nice * 2));
+  enum intr_level old_level = intr_disable ();
+  int nice_priority = PRI_MAX - fix_to_int_round(thread_current ()->recent_cpu) / 4 - (nice * 2);
+  thread_current ()->priority = nice_priority;
   
   // thread should yield if new priority is not the highest priority
   if (!list_empty (&ready_list))
   {
-    //small note by Matt: doesn't thread_priority_less need an &?
-    struct list_elem *temp_elem = list_max (&ready_list, thread_priority_less, NULL);
+    struct list_elem *temp_elem = list_max (&ready_list, &thread_priority_less, NULL);
     struct thread *t = list_entry (temp_elem, struct thread, elem);
+
     if (thread_current ()->priority < t->priority)
     {
       thread_yield ();
     }
   }
-  
+
+  intr_set_level (old_level);
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void)
 {
-  /* Not yet implemented. */
-  return 0;
+  return thread_current ()->niceness;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void)
 {
-  /* Not yet implemented. */
-  return 0;
+  fixed_point fix_load = mul_fix_int (thread_current ()->recent_cpu, 100);
+  int int_load = fix_to_int_round (fix_load);
+  return int_load;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void)
 {
-  /* Not yet implemented. */
-  return 0;
+  fixed_point fix_cpu = mul_fix_int (thread_current ()->recent_cpu, 100);
+  int int_cpu = fix_to_int_round (fix_cpu);
+  return int_cpu;
+}
+
+/* Student created thread, recalculates a thread's recent cpu
+ * based on the formula from pintos reference guide
+ */
+void
+thread_recalc_recent_cpu (struct thread *t, void *aux UNUSED)
+{
+  enum intr_level old_level = intr_disable ();
+
+  //could simplify this lol
+  fixed_point left_op = div_fix_fix(mul_fix_int (load_avg, 2), 
+    add_fix_int (mul_fix_int (load_avg, 2), 1));
+
+  left_op = mul_fix_fix (left_op, t->recent_cpu);
+
+  t->recent_cpu = add_fix_int (left_op, t->niceness);
+
+  intr_set_level (old_level);
+}
+
+/* Student created function to recalculate the system wide load average */
+void
+recalc_load_avg (void)
+{
+  enum intr_level old_level = intr_disable();
+
+
+  load_avg = add_fix_fix (div_fix_int(mul_fix_int (load_avg, 59), 60),
+    div_fix_int (int_to_fix ((int)list_size(&ready_list)), 60));
+
+  intr_set_level (old_level);
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -527,7 +562,7 @@ is_thread (struct thread *t)
 /* Does basic initialization of T as a blocked thread named
    NAME. */
 static void
-init_thread (struct thread *t, const char *name, int priority)
+init_thread (struct thread *t, const char *name, int priority, int nice)
 {
   //printf("initializing a thread\n");
   
@@ -544,7 +579,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->alms = 0;
   t->magic = THREAD_MAGIC;
-  
+  t->niceness = nice;
   list_init (&t->donators);
   sema_init (&t->thread_sema, 0);
   list_push_back (&all_list, &t->allelem);
