@@ -521,11 +521,18 @@ recalc_load_avg (void)
   ASSERT (intr_get_level () == INTR_OFF)
 
   // load_avg = (59/60)*load_avg + (1/60)*ready_threads
-
+  fixed_point op2;
   // broke this up to isolate problems with fixedpt algebra
-
   fixed_point op1 = div_fix_int (mul_fix_int (load_avg, 59),60);
-  fixed_point op2 = div_fix_int (int_to_fix (list_size(&ready_list)),60);
+  if (thread_current () != idle_thread)
+  {
+    op2 = div_fix_int (int_to_fix (list_size(&ready_list) + 1),60);
+  }
+  else
+  {
+    op2 = div_fix_int (int_to_fix (list_size(&ready_list)),60);
+  }
+
   load_avg = add_fix_fix (op1, op2);
 }
 

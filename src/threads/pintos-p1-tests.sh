@@ -22,28 +22,28 @@ main () {
         
         #fixed_point_test
         
-        alarm_single
-        alarm_multiple
-        alarm-simultaneous
-        alarm-priority
-        alarm-zero
-        alarm-negative
+        #alarm_single
+        #alarm_multiple
+        #alarm-simultaneous
+        #alarm-priority
+        #alarm-zero
+        #alarm-negative
         
-        priority-change
+        #priority-change
         #priority-donate-one
         #priority-donate-multiple
         #priority-donate-multiple2
         #priority-donate-nest
         #priority-donate-sema
         #priority-donate-lower
-        priority-fifo
-        priority-preempt
-        priority-sema
-        priority-condvar 
+        #priority-fifo
+        #priority-preempt
+        #priority-sema
+        #priority-condvar 
         #priority-donate-chain
         
-        #mlfqs-load-1
-        #mlfqs-load-60
+        mlfqs-load-1
+        mlfqs-load-60
         #mlfqs-load-avg
         #mlfqs-recent-1
         #mlfqs-fair-2
