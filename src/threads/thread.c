@@ -187,16 +187,14 @@ thread_create (const char *name, int priority,
   /* Initialize thread. */
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
-<<<<<<< HEAD
   
-=======
   /* MLFQS Advanced Scheduler implementation */
   if (thread_mlfqs)
   {
     t->niceness = thread_current ()->niceness;
     t->recent_cpu.val = thread_current ()->recent_cpu.val;
   }
->>>>>>> cd4f5a366f71d35a438179cf3107719926799117
+  
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
   kf->eip = NULL;
@@ -214,18 +212,12 @@ thread_create (const char *name, int priority,
   
   /* Add to run queue. */
   thread_unblock (t);
-<<<<<<< HEAD
   
-  struct thread *tc = thread_current ();
+  intr_set_level (old_level);
   
   if (priority > thread_get_priority ()) {
     thread_yield ();
   }
-=======
-  intr_set_level (old_level);
-  if (priority > thread_current()->priority)
-    thread_yield();
->>>>>>> cd4f5a366f71d35a438179cf3107719926799117
   
   return tid;
 }
@@ -260,11 +252,8 @@ thread_unblock (struct thread *t)
   ASSERT (is_thread (t));
   ASSERT (t->status == THREAD_BLOCKED);
   
-<<<<<<< HEAD
   enum intr_level old_level = intr_disable ();
   
-  list_insert_ordered (&ready_list, &t->elem, thread_priority_less, NULL);
-=======
   if (thread_mlfqs)
   {
     list_push_back (&ready_list, &t->elem);
@@ -273,7 +262,7 @@ thread_unblock (struct thread *t)
   {
     list_insert_ordered (&ready_list, &t->elem, thread_priority_less, NULL);
   }
->>>>>>> cd4f5a366f71d35a438179cf3107719926799117
+  
   t->status = THREAD_READY;
   
   intr_set_level (old_level);
@@ -463,13 +452,8 @@ thread_priority_less (const struct list_elem *a,
   struct thread *t1 = list_entry (a, struct thread, elem);
   struct thread *t2 = list_entry (b, struct thread, elem);
   
-  struct list *l1 = &t1->donators;
-  struct list *l2 = &t2->donators;
-  
   int priority1 = get_effective_priority (t1);
   int priority2 = get_effective_priority (t2);
-  //int priority1 = t1->priority;
-  //int priority2 = t2->priority;
   
   return (priority1 > priority2);
 }
@@ -656,7 +640,7 @@ is_thread (struct thread *t)
 /* Does basic initialization of T as a blocked thread named
    NAME. */
 static void
-init_thread (struct thread *t, const char *name, int priority, int nice)
+init_thread (struct thread *t, const char *name, int priority)
 {
   ASSERT (t != NULL);
   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
