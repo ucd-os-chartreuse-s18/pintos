@@ -41,7 +41,6 @@ timer_init (void)
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
   list_init(&waiting_thread_list);
-  //ASSERT(waiting_thread_list != NULL);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -97,40 +96,27 @@ timer_sleep (int64_t ticks)
   if (ticks <= 0) {
     return;
   }
-  int64_t start = timer_ticks ();
-  // the total tick value to wake at, check the waitlist each tick
-  int64_t tick_to_wake = start + ticks;
-
-  // this pointer lets us reference the entire Thread structure
-  struct thread *current_thread = thread_current();
-
+  
   ASSERT (intr_get_level () == INTR_ON);
-
-  /* keeping the old_level to use later for re-enabling.
-   * I would just directly disable and enable interrupts
-   * but I am trying to follow the existing coding style
-   */
-  // disable interrrupts so the timer doesn't interfere
-  enum intr_level old_level = intr_disable(); // interrupts now disabled
-
-  //set the threads tick to wake
+  
+  int64_t start = timer_ticks ();
+  int64_t tick_to_wake = start + ticks;
+  
+  struct thread *current_thread = thread_current();
   current_thread->thread_wake_tick = tick_to_wake;
-
-  // put the current thread on a list of sleeping threads
+  
+  /* Disable interrrupts so that we can insert into
+   * the list atomically. alarm-simultaneous passes 
+   * even without this precaution, though it may be 
+   * due to luck. */
+  enum intr_level old_level = intr_disable();
   list_push_back (&waiting_thread_list, &current_thread->waiting_elem);
-
-  /* down the thread's semaphore, causing it to be blocked until the
-   * semaphore is upped by the timer interrupt.
-   * to the sema_down and up functions
-   */
-  sema_down(&current_thread->thread_sema);
-
-  /* reenable interrupts now that we have downed the semaphore
-   * blocked the thread, again, following pintos style by passing
-   * old_level to the set_level function
-   */
   intr_set_level(old_level);
-
+  
+  /* Won't continue from sema_down until the timer uses waiting_thread_list 
+   * to wake up the thread. */
+  sema_down(&current_thread->thread_sema);
+  
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
