@@ -130,7 +130,6 @@ thread_tick (void)
 {
   struct thread *t = thread_current ();
 /* MLFQS Advanced Schedule implementation */
-  enum intr_level old_level = intr_disable ();
   if (thread_mlfqs)
   {
     //enum intr_level old_level = intr_disable ();
@@ -146,7 +145,7 @@ thread_tick (void)
     {
       thread_foreach(&thread_recalc_priority, NULL); 
     }
-    
+    //intr_set_level (old_level);
   }
   /* Update statistics. */
   if (t == idle_thread)
@@ -163,7 +162,6 @@ thread_tick (void)
     kernel_ticks++;
     t->recent_cpu = add_fix_int (t->recent_cpu, 1);
   }
-  intr_set_level (old_level);
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
@@ -240,12 +238,12 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
   
-  
+  intr_set_level (old_level);
   
   if (priority > thread_get_priority ()) {
     thread_yield ();
   }
-  intr_set_level (old_level);
+  
   return tid;
 }
 
@@ -436,21 +434,6 @@ int
 thread_get_priority (void)
 {
   return get_effective_priority (thread_current ());
-  /*
-  struct list *l = &thread_current ()->donators;
-  if (!list_empty (l))
-  {
-    enum intr_level old_level = intr_disable ();
-    //was front, but order was different from what I thought
-    //it is sorted 32, 33, etc. and not 33, 32?
-    struct list_elem *e = list_front (l); //front and back..
-    struct thread *t = list_entry (e, struct thread, donor_elem);
-    intr_set_level (old_level);
-    
-    return t->priority;
-  }
-  return thread_current ()->priority;
-  //*/
 }
 
 bool
@@ -578,7 +561,6 @@ thread_recalc_priority (struct thread *t, void *aux UNUSED)
   t->priority = nice_priority;
   
   // thread should yield if new priority is not the highest priority
-  //if t->priority
 }
 /* Student created function to recalculate the system wide load average */
 void
@@ -677,7 +659,6 @@ is_thread (struct thread *t)
 static void
 init_thread (struct thread *t, const char *name, int priority)
 {
-  enum intr_level old_level = intr_disable ();
   ASSERT (t != NULL);
   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
   ASSERT (name != NULL);
@@ -693,7 +674,6 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init (&t->donators);
   sema_init (&t->thread_sema, 0);
   list_push_back (&all_list, &t->allelem);
-  intr_set_level (old_level);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
