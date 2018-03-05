@@ -119,7 +119,7 @@ Specifically, the `waiters` list of a semaphore is sorted
 . Locks hold semaphores, so they have the same
 ability.
 
-##### B4: Describe the sequence of events when a call to lock_acquire() causes a priority donation.  How is nested donation handled?
+##### B4: Describe the sequence of events when a call to lock_acquire() causes a priority donation.
 
 If a thread fails in acquiring a lock, it will get added as a
 donor to the holder of the lock's `donators` list.
@@ -130,13 +130,6 @@ At the same time, it will get added to the lock's waiting list
 After the thread is woken up by `sema_up()` (when the lock was
 released), we transfer the waiters on the locks to the new
 thread's `donators` list.
-
-Nested donation:  
-LOW acquires lock a  
-MED donates to LOW for a  
-MED acquires lock b  
-HIGH donates to MED for b  
-Nested donation is handled because...
 
 ##### B5: Describe the sequence of events when lock_release() is called on a lock that a higher-priority thread is waiting for.
 
@@ -159,7 +152,10 @@ lock would probably be helpful to avoid race conditions.
 
 ##### B7: Why did you choose this design?  In what ways is it superior to another design you considered?
 
-create 2 png images with my own scenario
+While implementing priority donation, I thought of an implementation 
+where the thread instead had a list of locks. I thought that the way 
+I implemented it now was simpler at the time, though I don't have a 
+strong reason for this. 
 
 ----------------------------------------------------------
 ## ADVANCED SCHEDULER	  
@@ -218,7 +214,7 @@ code inside interrupts we found that the behavior was irratic and unpredicatable
 
 ##### C5: Briefly critique your design, pointing out advantages and disadvantages in your design choices.  If you were to have extra time to work on this part of the project, how might you choose to refine or improve your design?  
 
-My design is basic and makes liberal use of interrupts, perhaps too liberal.  In the future, I might try to lay out critical sections of code more carefully so as to avoid being in interrupt context too long.
+My design is basic and makes liberal use of interrupts, perhaps too liberal. In the future, I might try to lay out critical sections of code more carefully so as to avoid being in interrupt context too long.
 
 ##### C6: The assignment explains arithmetic for fixed-point math in detail, but it leaves it open to you to implement it.  Why did you decide to implement it the way you did?  If you created an abstraction layer for fixed-point math, that is, an abstract data type and/or a set of functions or macros to manipulate fixed-point numbers, why did you do so?  If not, why not?
 
@@ -226,25 +222,3 @@ We implemented fixed-point the way the pintos documentation went over it.
 Overall, the level of abstraction made the code easier to work with and
 more reliable than it would have been without. However, implementing
 floating point math without a struct would have probably made it faster.
-
-----------------------------------------------------------
-All-in-one Reference for me of what we added to thread:  
-There might be other things we need to consider (remove
-when finished).
-```c
-struct thread:
-	
-	/* ALARM */
-	+ int64_t thread_wake_tick;
-	+ struct list_elem waiting_elem;
-	+ struct semaphore thread_sema;
-	
-	/* PRIORITY */
-	+ struct list donators;
-	+ struct list_elem donor_elem;
-  
-	/* MLFQs */
-	+ int niceness;
-	+ fixed_point recent_cpu;
-	
-```
