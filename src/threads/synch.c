@@ -219,7 +219,7 @@ lock_acquire (struct lock *lock)
     //Sorted by priority so that we can select the highest
     struct list *l = &lock->holder->donators;
     struct list_elem *e = &thread_current ()->donor_elem;
-        
+    
     list_insert_ordered (l, e, donate_priority_less, NULL);
     
     //sema_down adds the current thread to the semaphore's waiting list 
@@ -235,6 +235,9 @@ lock_acquire (struct lock *lock)
     for (e = list_begin (l); e != list_end (l);)
     {
       struct thread *t = list_entry (e, struct thread, elem);
+      
+      //I think I can now remove this conditional, since it 
+      //should have been done in sema_up.
       if (t == thread_current ())
       { //remove e from l (no longer waiting)
         e = list_remove (e);
