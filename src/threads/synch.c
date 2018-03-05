@@ -124,10 +124,13 @@ sema_up (struct semaphore *sema)
   
   sema->value++;
   
-  int p = highest_ready_priority ();
-  if (thread_get_priority () < p)
+  if (!thread_mlfqs)
   {
-    thread_yield();
+    int p = highest_ready_priority ();
+    if (thread_get_priority () < p)
+    {
+      thread_yield();
+    }
   }
   
   intr_set_level (old_level);

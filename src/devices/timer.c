@@ -98,6 +98,7 @@ timer_sleep (int64_t ticks)
   }
   
   ASSERT (intr_get_level () == INTR_ON);
+  //enum intr_level old_level = intr_disable();
   
   int64_t start = timer_ticks ();
   int64_t tick_to_wake = start + ticks;
@@ -117,6 +118,7 @@ timer_sleep (int64_t ticks)
    * to wake up the thread. */
   sema_down(&current_thread->thread_sema);
   
+  //intr_set_level(old_level);
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
