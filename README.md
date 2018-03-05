@@ -33,11 +33,8 @@ _OR_
 
 #### _TODO_
 
-_Primary Task:_  
-Michael is working on MLFQs, while I (Matt) am working on the _README_ and *DOC_P1*
-
 _Alarm:_  
 The alram may need to be updated. See details in the design doc.
 
-_README:_  
-Insert information on "make check"
+*DOC_P1:*  
+There are just a couple loose strings in the design doc.
