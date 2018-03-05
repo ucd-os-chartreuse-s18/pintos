@@ -169,7 +169,21 @@ create 2 png images with my own scenario
 ##### C1: Copy here the declaration of each new or changed _struct_ or _struct_ member, global or static variable, _typedef_, or enumeration.  Identify the purpose of each in 25 words or less.
 
 ```c
-//TODO put code stuff here
+/* implements fixed-point real number arithmetic operations */
+struct fixed_point 
+
+/* a calculation of the number of ready threads over the last minute 
+ * used to balance scheduling priorities
+ */
+static fixed_point load_avg 
+
+/* a count of the number of timer ticks a running thread has used.
+ * threads with higher recent_cpu may have their priority lowered
+ */
+static fixed_point recent_cpu
+
+/* "nice" threads lower their priority more readily */
+int niceness
 ```
 
 **---- ALGORITHMS ----**
@@ -196,15 +210,15 @@ ticks   A   B   C   A   B   C   to run
 
 ##### C4: How is the way you divided the cost of scheduling between code inside and outside interrupt context likely to affect performance?
 
-interrupts should be as small as possible, otherwise it may cut into the
-timeslice of the next one? IDK what I'm talking about 100%, this is Matt
-and I didn't implement this part.
+Interrupts should be as small as possible, otherwise threads may be blamed for more cpu time than they actually
+used.  This may be one reason why thread 0 fails the mlfqs-nice-20 test.  Additionally, when we had too much 
+code inside interrupts we found that the behavior was irratic and unpredicatable in regards to when threads would yield to one another.
 
 **---- RATIONALE ----**
 
 ##### C5: Briefly critique your design, pointing out advantages and disadvantages in your design choices.  If you were to have extra time to work on this part of the project, how might you choose to refine or improve your design?  
 
-//TODO
+My design is basic and makes liberal use of interrupts, perhaps too liberal.  In the future, I might try to lay out critical sections of code more carefully so as to avoid being in interrupt context too long.
 
 ##### C6: The assignment explains arithmetic for fixed-point math in detail, but it leaves it open to you to implement it.  Why did you decide to implement it the way you did?  If you created an abstraction layer for fixed-point math, that is, an abstract data type and/or a set of functions or macros to manipulate fixed-point numbers, why did you do so?  If not, why not?
 
