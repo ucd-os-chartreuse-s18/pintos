@@ -193,32 +193,11 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
-  struct thread *t = thread_current ();
+  //struct thread *t = thread_current ();
   ticks++;
   thread_tick ();
-
-
-  /* MLFQS Advanced Schedule implementation */
-  if (thread_mlfqs)
-  {
-
-    add_fix_int (t->recent_cpu, 1);
-    
-    if (ticks % TIMER_FREQ == 0)
-    {
-      thread_foreach(&thread_recalc_recent_cpu, NULL);
-      recalc_load_avg (); 
-    }
-
-    if (ticks % 4 == 0)
-    {
-      thread_foreach(&thread_recalc_priority, NULL); 
-    }
-  }
-  
-
-  // calculate the current thread's recent_cpu if a second has gone by
-
+/* MLFQS Advanced Schedule implementation */
+ 
   /* To wake a sleeping thread using the timer interrupt
    * we need to check the elements of the waiting thread list
    * to see if the current ticks are equal to the tick at which

@@ -12,6 +12,7 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "threads/fixed-point.h"
+#include "devices/timer.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -128,16 +129,39 @@ void
 thread_tick (void)
 {
   struct thread *t = thread_current ();
+/* MLFQS Advanced Schedule implementation */
+  if (thread_mlfqs)
+  {
+    //enum intr_level old_level = intr_disable ();
+    //add_fix_int (t->recent_cpu, 1);
 
+    if (timer_ticks() % TIMER_FREQ == 0)
+    {
+      thread_foreach(&thread_recalc_recent_cpu, NULL);
+      recalc_load_avg (); 
+    }
+
+    if (timer_ticks() % 4 == 0)
+    {
+      thread_foreach(&thread_recalc_priority, NULL); 
+    }
+    //intr_set_level (old_level);
+  }
   /* Update statistics. */
   if (t == idle_thread)
     idle_ticks++;
 #ifdef USERPROG
   else if (t->pagedir != NULL)
+  {
     user_ticks++;
+    t->recent_cpu = add_fix_int (t->recent_cpu, 1);
+  }
 #endif
   else
+  {
     kernel_ticks++;
+    t->recent_cpu = add_fix_int (t->recent_cpu, 1);
+  }
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
@@ -193,6 +217,7 @@ thread_create (const char *name, int priority,
   {
     t->niceness = thread_current ()->niceness;
     t->recent_cpu.val = thread_current ()->recent_cpu.val;
+    thread_recalc_priority (t, NULL);
   }
   
   /* Stack frame for kernel_thread(). */
@@ -451,9 +476,9 @@ thread_set_nice (int nice)
   //enum intr_level old_level = intr_disable ();
   // set the niceness
   thread_current ()->niceness = nice;
-  
-  /*thread_recalc_priority (thread_current (), &nice);
+  //thread_recalc_priority (thread_current (), NULL);
 
+  /*
   if (!list_empty (&ready_list))
   {
     struct list_elem *temp_elem = list_max (&ready_list, &thread_priority_less, NULL);
@@ -464,11 +489,10 @@ thread_set_nice (int nice)
       thread_yield ();
     }
   }
-
+*/
   //intr_set_level (old_level);
-  */
+  
 }
-
 
 /* Returns the current thread's nice value. */
 int
@@ -526,6 +550,14 @@ thread_recalc_priority (struct thread *t, void *aux UNUSED)
 
   nice_priority = fix_to_int_floor (op3);
 
+  if (nice_priority > PRI_MAX)
+  {
+    nice_priority = PRI_MAX;
+  }
+  if (nice_priority < PRI_MIN)
+  {
+    nice_priority = PRI_MIN;
+  }
   t->priority = nice_priority;
   
   // thread should yield if new priority is not the highest priority
@@ -636,7 +668,7 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
-  t->recent_cpu.val = 0;
+  //t->recent_cpu.val = 0;
   t->magic = THREAD_MAGIC;
   //t->niceness = thread_current()->niceness;
   list_init (&t->donators);
