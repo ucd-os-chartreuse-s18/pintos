@@ -102,7 +102,8 @@ struct list_elem donor_elem;
 
 ##### B2: Explain the data structure used to track priority donation. Use ASCII art to diagram a nested donation.  (Alternately, submit a .png file.)
 
-png
+Diagram: 
+![nested_priority](https://github.com/ucd-os-chartreuse-s18/pintos/blob/master/nested-priority-diagram.png)
 
 **---- ALGORITHMS ----**
 
