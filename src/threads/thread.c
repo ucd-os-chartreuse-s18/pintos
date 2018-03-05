@@ -701,7 +701,20 @@ next_thread_to_run (void)
   if (list_empty (&ready_list))
     return idle_thread;
   else
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+  {
+    if (thread_mlfqs)
+    {
+      struct thread  *t = list_entry (list_min (&ready_list, thread_priority_less, NULL),
+        struct thread, elem);
+      list_remove (&t->elem);
+      return t;
+    }
+    else
+    {
+      return list_entry (list_pop_front (&ready_list), struct thread, elem);
+    }
+  }
+
 }
 
 int
