@@ -98,7 +98,6 @@ timer_sleep (int64_t ticks)
   }
   
   ASSERT (intr_get_level () == INTR_ON);
-  //enum intr_level old_level = intr_disable();
   
   int64_t start = timer_ticks ();
   int64_t tick_to_wake = start + ticks;
@@ -107,18 +106,17 @@ timer_sleep (int64_t ticks)
   current_thread->thread_wake_tick = tick_to_wake;
   
   /* Disable interrrupts so that we can insert into
-   * the list atomically. alarm-simultaneous passes 
-   * even without this precaution, though it may be 
+   * the list atomically. alarm-simultaneous passes
+   * even without this precaution, though it may be
    * due to luck. */
   enum intr_level old_level = intr_disable();
   list_push_back (&waiting_thread_list, &current_thread->waiting_elem);
   intr_set_level(old_level);
   
-  /* Won't continue from sema_down until the timer uses waiting_thread_list 
+  /* Won't continue from sema_down until the timer uses waiting_thread_list
    * to wake up the thread. */
   sema_down(&current_thread->thread_sema);
   
-  //intr_set_level(old_level);
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
